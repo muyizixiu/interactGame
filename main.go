@@ -9,14 +9,14 @@ import "ws"
 func main() {
 	println("hel")
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		f, err := os.Open("fedorashared/ws.html")
+		f, err := os.Open("html/ws.html")
 		if err != nil {
 			fmt.Println(err.Error())
 		}
 		io.Copy(w, f)
 	})
 	http.HandleFunc("/mv", func(w http.ResponseWriter, r *http.Request) {
-		f, err := os.Open("fedorashared/mv.html")
+		f, err := os.Open("html/mv.html")
 		if err != nil {
 			fmt.Println(err.Error())
 		}

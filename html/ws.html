@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>websocket</title>
+	<style type="text/css">
+	.shit{
+				border:2px solid #444;
+				height: 1px;
+				width: 1px;
+				position: absolute;
+				animation: myfirst 2s forwards;
+				-moz-animation: myfirst 2s forwards;	/* Firefox */
+				-webkit-animation: myfirst 2s forwards;	/* Safari 和 Chrome */
+				-o-animation: myfirst 2s forwards;	/* Opera */
+	}
+	#body{
+		width: 100%;
+		height:10000px;
+	}
+			@keyframes myfirst{
+			from {background: red;width: 1px;height:1px;border-radius: 1px;}
+				to {background: yellow;width: 40px;height:40px;border-radius:40px;}
+			}
+@-moz-keyframes myfirst /* Firefox */
+{
+from {background: red;width: 1px;height:1px;border-radius: 1px;}
+				to {background: yellow;width: 40px;height:40px;border-radius:40px;}
+}
+
+@-webkit-keyframes myfirst /* Safari 和 Chrome */
+{from {background: red;width: 1px;height:1px;border-radius: 1px;}
+				to {background: yellow;width: 40px;height:40px;border-radius:40px;}
+}
+
+@-o-keyframes myfirst /* Opera */
+{from {background: red;width: 1px;height:1px;border-radius: 1px;}
+				to {background: yellow;width: 40px;height:40px;border-radius:40px;}
+}
+																					}
+</style>
+	</head>
+	<body id="body">
+	<script type="text/javascript">
+var body=document.getElementById("body")
+	ws=new WebSocket("ws://192.168.1.128:81")
+	ws.onopen=function(event){
+		console.log(ws)
+		ws.send("hello server");
+	}
+	var bod=document.getElementById('body');
+		 bod.onclick=function(event){
+			          x=event.x;
+				           y=event.y;
+					            a(x,y)
+							         }
+     function a(x,y){
+	          	var a=document.createElement("div")
+				         a.style.left=x+"px"
+					          a.style.top=y+"px"
+						           bod.appendChild(a);
+			         a.className="shit";
+				      }
+ws.onmessage=function(event){
+	d=JSON.parse(event.data)
+		a(d.x,d.y)
+}
+body.onclick=function(event){
+	x=event.x;
+	y=event.y;
+	document.createElement("div")
+		js='{"x":"'+x+'","y":"'+y+'"}'
+		ws.send(js);
+		a(x,y)
+}
+	</script>
+	</body>
+	</html>
