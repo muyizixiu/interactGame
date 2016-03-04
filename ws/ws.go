@@ -1,19 +1,22 @@
 package ws
 
-import "golang.org/x/net/websocket"
+import (
+	"sync"
+
+	"golang.org/x/net/websocket"
+)
 import "errors"
 
 const IdMask = 0x0f
 
 var IdNum = 0
-var room0 = &Room{Clients: make(map[int]*Conn), SharedDataQue: make(chan Data, 10)}
-var room1 = &Room{Clients: make(map[int]*Conn), SharedDataQue: make(chan Data, 10)}
-var room []*Room
+var room map[int]*Room
 
 func init() {
-	go room1.initChan()
-	go room0.initChan()
-	room = []*Room{room0, room1}
+	room0 := initARoom()
+	room1 := initARoom()
+	room[room0.Id] = room0
+	room[room1.Id] = room1
 }
 
 type Conn struct {
@@ -46,6 +49,25 @@ func (c Conn) GetRoomId() int {
 type Room struct {
 	Clients       map[int]*Conn
 	SharedDataQue chan Data
+	Id            int
+}
+
+var roomId = struct {
+	Id     int
+	locker sync.Mutex
+}{Id: 0, locker: sync.Mutex{}}
+
+func GetRoomId() int {
+	roomId.locker.Lock()
+	defer roomId.locker.Unlock()
+	roomId.Id++
+	return roomId.Id
+}
+func initARoom() *Room {
+	r := &Room{Clients: make(map[int]*Conn), SharedDataQue: make(chan Data, 10)}
+	r.Id = GetRoomId()
+	r.initChan()
+	return r
 }
 
 func (r *Room) Add(c *Conn) {
@@ -87,7 +109,9 @@ var WsHandler websocket.Handler = func(con *websocket.Conn) {
 				println(err.Error())
 				return
 			}
-			room0.Receive(Data{Type: 1, Conntent: msg[:n], From: c.Id})
+			if r, ok := room[0]; ok {
+				r.Receive(Data{Type: 1, Conntent: msg[:n], From: c.Id})
+			}
 		}
 	case "/mv":
 		c := NewConn(con, 1)
@@ -98,7 +122,9 @@ var WsHandler websocket.Handler = func(con *websocket.Conn) {
 				println(err.Error())
 				return
 			}
-			room1.Receive(Data{Type: 1, Conntent: msg[:n], From: c.Id})
+			if r, ok := room[1]; ok {
+				r.Receive(Data{Type: 1, Conntent: msg[:n], From: c.Id})
+			}
 		}
 	}
 }
