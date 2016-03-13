@@ -1,0 +1,136 @@
+<!DOCTYPE html > 
+<html>
+<head>
+	<title>chess</title>
+	<style type="text/css">
+	#main{
+		height: 1200px;
+		width: 1200px;
+		border:1px solid #333;
+	}
+	#plat{
+		height: 1004px;
+		width: 1004px;
+		background-image: url(http://192.168.2.100:82/plat.png);
+		background-repeat: repeat;
+		margin-top:10px;
+		margin-left: 100px;
+	}
+	.chess{
+		height: 98px;
+		width: 98px;
+		border: 1px solid #333;
+		float: left;
+	}
+	@keyframes blackChess{
+from {background: #666;width: 1px;height:1px;border-radius: 1px;}
+to {background: #000;width: 40px;height:40px;border-radius:40px;}
+}
+@keyframes whiteChess{
+from {background: #ddd;width: 1px;height:1px;border-radius: 1px;}
+to {background: #fff;width: 40px;height:40px;border-radius:40px;}
+}
+.shit{
+		border:2px solid #444;
+		height: 10px;
+		width: 1px;
+		position: absolute;
+		animation: blackChess 2s forwards;
+	}
+	.whiteChess{
+
+
+		border:2px solid #eee;
+		height: 10px;
+		width: 1px;
+		position: absolute;
+		animation: whiteChess 2s forwards;
+	}
+	</style>
+</head>
+<body>
+<div id="plat"></div>
+<script type="text/javascript">
+	main=document.getElementById('plat');
+	var plat=new Array();
+	var lock=false;
+	for (var i = 0; i <=10; i++) {
+		plat[i]=[0,0,0,0,0,0,0,0,0,0,0]
+	};
+	function IsAllowed(x,y){
+		if (plat[x][y]==0){
+			return true
+		}
+		return false
+	}
+	main.onclick=function  (event) {
+		// body...
+		x=event.x;
+		x=Math.round(x/100);
+         y=event.y;
+         y=Math.round(y/100);
+         if (IsAllowed(x,y)){
+         PutChess(x,y);
+     }
+	}
+	// 创建一个Socket实例
+var socket = new WebSocket('ws://192.168.1.130:81/mv'); 
+
+// 打开Socket 
+socket.onopen = function(event) { 
+
+  // 发送一个初始化消息
+  //socket.send(""); 
+
+  // 监听消息
+  socket.onmessage = function(event) { 
+    console.log('Client received a message',event); 
+    data=JSON.parse(event.data)
+    
+  GetChess(data.X,data.Y);
+  console.log(data)
+  }; 
+
+  // 监听Socket的关闭
+  socket.onclose = function(event) { 
+    console.log('Client notified socket has closed',event); 
+  
+  }; 
+  // 关闭Socket.... 
+  //socket.close() 
+};
+	function PutChess(x,y){
+		if (lock){
+			return
+		}
+		json='{"X":'+x+',"Y":'+y+'}'
+			console.log(json)
+
+		socket.send(json);
+		plat[x][y]=1
+		x=x*100-15;
+		y=y*100-15;
+	chess=document.createElement("div")
+	chess.style.left=x+"px";
+         chess.style.top=y+"px";
+		chess.className="whiteChess";
+		main.appendChild(chess);
+		
+		lock=true
+	}
+	
+	function GetChess(x,y){
+		plat[x][y]=2
+		x=x*100-15;
+		y=y*100-15;
+	chess=document.createElement("div")
+	chess.style.left=x+"px";
+         chess.style.top=y+"px";
+		chess.className="shit";
+		main.appendChild(chess);
+
+		lock=false;
+	}
+</script>
+</body>
+</html>

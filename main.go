@@ -1,24 +1,37 @@
 package main
 
-import "net/http"
+import (
+	"encoding/json"
+	"io"
+	"net/http"
+	"os"
+	"strconv"
+)
 import "fmt"
-import "os"
-import "io"
+
 import "ws"
 
 func main() {
 	println("hel")
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		f, err := os.Open("html/ws.html")
-		if err != nil {
-			fmt.Println(err.Error())
+	http.HandleFunc("/gate", func(w http.ResponseWriter, r *http.Request) {
+		r.ParseForm()
+		room := r.Form.Get("room")
+		var roomId int
+		if i, err := strconv.ParseInt(room, 10, 64); err == nil {
+			if i != 0 {
+				roomId = int(i)
+			}
 		}
-		io.Copy(w, f)
+		name := r.Form.Get("name")
+		a := ws.Key{RoomId: roomId, Name: name}
+		byt, _ := json.Marshal(a)
+		w.Write(byt)
 	})
-	http.HandleFunc("/mv", func(w http.ResponseWriter, r *http.Request) {
-		f, err := os.Open("html/mv.html")
+	http.HandleFunc("/chess", func(w http.ResponseWriter, r *http.Request) {
+		f, err := os.Open("./chess.html")
 		if err != nil {
 			fmt.Println(err.Error())
+			return
 		}
 		io.Copy(w, f)
 	})

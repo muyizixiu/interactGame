@@ -1,6 +1,8 @@
 package ws
 
 import (
+	"encoding/json"
+	"fmt"
 	"sync"
 
 	"golang.org/x/net/websocket"
@@ -12,7 +14,13 @@ const IdMask = 0x0f
 var IdNum = 0
 var room map[int]*Room
 
+type Key struct {
+	RoomId int
+	Name   string
+}
+
 func init() {
+	room = make(map[int]*Room, 10)
 	room0 := initARoom()
 	room1 := initARoom()
 	room[room0.Id] = room0
@@ -22,6 +30,7 @@ func init() {
 type Conn struct {
 	Conn *websocket.Conn
 	Id   int
+	Mask int
 }
 
 func (c *Conn) Write(d Data) error {
@@ -66,7 +75,7 @@ func GetRoomId() int {
 func initARoom() *Room {
 	r := &Room{Clients: make(map[int]*Conn), SharedDataQue: make(chan Data, 10)}
 	r.Id = GetRoomId()
-	r.initChan()
+	go r.initChan()
 	return r
 }
 
@@ -105,6 +114,7 @@ var WsHandler websocket.Handler = func(con *websocket.Conn) {
 		for {
 			msg := make([]byte, 1024)
 			n, err := con.Read(msg)
+			fmt.Println(string(msg))
 			if err != nil {
 				println(err.Error())
 				return
@@ -126,5 +136,36 @@ var WsHandler websocket.Handler = func(con *websocket.Conn) {
 				r.Receive(Data{Type: 1, Conntent: msg[:n], From: c.Id})
 			}
 		}
+	case "/gobang":
+		msg := make([]byte, 1024)
+		n, err := con.Read(msg)
+		if err != nil {
+			println(err.Error())
+			return
+		}
+		roomId := getRoomId(msg[:n])
+		c := NewConn(con, roomId)
+		for {
+			msg := make([]byte, 1024)
+			n, err := con.Read(msg)
+			if err != nil {
+				println(err.Error())
+				return
+			}
+			if r, ok := room[1]; ok {
+				r.Receive(Data{Type: 1, Conntent: msg[:n], From: c.Id})
+			}
+		}
 	}
+}
+
+func getRoomId(msg []byte) int {
+	key := &Key{}
+	if json.Unmarshal(msg, key) != nil {
+		return 0
+	}
+	if key.RoomId > 0 && key.RoomId < 1000000 {
+		return key.RoomId
+	}
+	return 0
 }
