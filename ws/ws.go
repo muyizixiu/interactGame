@@ -3,7 +3,7 @@ package ws
 import (
 	"encoding/json"
 	"fmt"
-	"groups/log"
+	//"groups/log"
 	"strconv"
 	"sync"
 	"time"
@@ -15,6 +15,7 @@ import "errors"
 const BEGIN = 0
 const RUNNING = 1
 const WAITING = 0
+const CLOSING = 2
 const IdMask = 0x0f
 
 var RoomNotExist = errors.New("room not exist")
@@ -128,7 +129,7 @@ func (r Room) IsOverLimit(t int) bool {
 	if m, ok := r.Clients_r[t]; ok {
 		return IsOverLimit(r.GameName, t, len(m))
 	}
-	log.Log("no such limit at " + r.GameName + " at " + strconv.Itoa(t))
+	//log.Log("no such limit at " + r.GameName + " at " + strconv.Itoa(t))
 	return true
 }
 
@@ -150,7 +151,7 @@ func (r RoomConfig) IsOverLimit(t int, total int) bool {
 		fmt.Print("total limit", total, limit)
 		return total >= limit
 	} //！ok 应该做错误日志
-	log.Log("fatal: no such game limit: " + r.GameName + " at " + strconv.Itoa(t)) //这个日志意味着有程序内部错误
+	//log.Log("fatal: no such game limit: " + r.GameName + " at " + strconv.Itoa(t)) //这个日志意味着有程序内部错误
 	return true
 }
 
@@ -160,7 +161,7 @@ func IsOverLimit(name string, t, total int) bool {
 	if r, ok := roomConfig[name]; ok {
 		return r.IsOverLimit(t, total)
 	}
-	log.Log("no such game :" + name)
+	//log.Log("no such game :" + name)
 	return true
 }
 
@@ -231,8 +232,10 @@ func (r *Room) run() { //@todo a better way to achieve the feature?
 			r.Status = RUNNING
 			r.Notify(BEGIN)
 		}
-		if r.IsEmpty() && r.Status == RUNNING {
+		if r.IsEmpty() {
+			r.Status = CLOSING
 			r.Close()
+			return
 		}
 	}
 }
