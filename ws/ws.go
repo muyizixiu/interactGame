@@ -61,7 +61,13 @@ type Room struct {
 	SharedDataQue chan Data
 	Id            int
 	ClientsLeft   []*Conn
+	Clients_r     map[int]map[int]*Conn
+	RoomGame      string //房间所属游戏的名字
+	config        RoomConfig
 }
+
+//房间配置信息,决定房间有多少人，房间基础信息
+type RoomConfig struct{}
 
 var roomId = struct {
 	Id     int
@@ -74,7 +80,9 @@ func GetRoomId() int {
 	roomId.Id++
 	return roomId.Id
 }
-func initARoom() *Room {
+
+//初始化一个房间，读取json配置，载入房间配置
+func initARoom(t int) *Room {
 	r := &Room{Clients: make(map[int]*Conn), SharedDataQue: make(chan Data, 10)}
 	r.Id = GetRoomId()
 	go r.initChan()
@@ -110,6 +118,7 @@ type Data struct {
 }
 
 var WsHandler websocket.Handler = func(con *websocket.Conn) {
+	InitAConn(con)
 	switch con.Request().URL.Path {
 	case "/":
 		c := NewConn(con, 0)
@@ -179,4 +188,9 @@ func getRoomId(msg []byte) int {
 		return key.RoomId
 	}
 	return 0
+}
+
+//初始化一个连接，配置好进入游戏房间，加载房间配置,解析客户端请求,向客户端写入初始化数据
+func InitAConn(c *websocket.Conn) (error, *Conn) {
+	return nil, nil
 }
