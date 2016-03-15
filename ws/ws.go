@@ -3,6 +3,7 @@ package ws
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"sync"
 
 	"golang.org/x/net/websocket"
@@ -59,6 +60,7 @@ type Room struct {
 	Clients       map[int]*Conn
 	SharedDataQue chan Data
 	Id            int
+	ClientsLeft   []*Conn
 }
 
 var roomId = struct {
@@ -125,6 +127,15 @@ var WsHandler websocket.Handler = func(con *websocket.Conn) {
 		}
 	case "/mv":
 		c := NewConn(con, 1)
+		con.Write([]byte("{\"d\":" + strconv.Itoa(int(c.Id)) + "}"))
+		if len(room[1].ClientsLeft) < 1 {
+			room[1].ClientsLeft = append(room[1].ClientsLeft, c)
+		} else {
+			p := room[1].ClientsLeft[0]
+			room[1].ClientsLeft = room[1].ClientsLeft[1:]
+			con.Write([]byte("{\"p\":" + strconv.Itoa(int(p.Id)) + "}"))
+			p.Conn.Write([]byte("{\"p\":" + strconv.Itoa(int(c.Id)) + "}"))
+		}
 		for {
 			msg := make([]byte, 1024)
 			n, err := con.Read(msg)

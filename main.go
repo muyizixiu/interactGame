@@ -12,7 +12,6 @@ import "fmt"
 import "ws"
 
 func main() {
-	println("hel")
 	http.HandleFunc("/gate", func(w http.ResponseWriter, r *http.Request) {
 		r.ParseForm()
 		room := r.Form.Get("room")
@@ -29,15 +28,26 @@ func main() {
 	})
 	http.HandleFunc("/chess", func(w http.ResponseWriter, r *http.Request) {
 		f, err := os.Open("./chess.html")
+		defer f.Close()
 		if err != nil {
 			fmt.Println(err.Error())
 			return
 		}
 		io.Copy(w, f)
 	})
+	http.HandleFunc("/flat.png", func(w http.ResponseWriter, r *http.Request) {
+		f, err := os.Open("./flat.png")
+		if err != nil {
+			fmt.Println(err.Error())
+			return
+		}
+		defer f.Close()
+		io.Copy(w, f)
+	})
+
 	go func() {
+		println("server listen at 80 port")
 		err := http.ListenAndServe(":80", nil)
-		println("ehll")
 		fmt.Println(err.Error())
 	}()
 	err := http.ListenAndServe(":81", ws.WsHandler)
