@@ -12,6 +12,7 @@ import "errors"
 
 const IdMask = 0x0f
 
+var RoomNotExist = errors.New("room not exist")
 var IdNum = 0
 var room map[int]*Room
 
@@ -32,6 +33,7 @@ type Conn struct {
 	Conn *websocket.Conn
 	Id   int
 	Mask int
+	Sid  int
 }
 
 func (c *Conn) Write(d Data) error {
@@ -82,15 +84,17 @@ func GetRoomId() int {
 }
 
 //初始化一个房间，读取json配置，载入房间配置
-func initARoom(t int) *Room {
+func initARoom(gName string) *Room {
 	r := &Room{Clients: make(map[int]*Conn), SharedDataQue: make(chan Data, 10)}
 	r.Id = GetRoomId()
 	go r.initChan()
 	return r
 }
 
-func (r *Room) Add(c *Conn) {
+//put client into room against game rule defined by game name
+func (r *Room) Add(c *Conn) error {
 	r.Clients[c.Id] = c
+	return nil
 }
 func (r *Room) Del(c *Conn) {
 	delete(r.Clients, c.Id)
@@ -192,5 +196,31 @@ func getRoomId(msg []byte) int {
 
 //初始化一个连接，配置好进入游戏房间，加载房间配置,解析客户端请求,向客户端写入初始化数据
 func InitAConn(c *websocket.Conn) (error, *Conn) {
-	return nil, nil
+	r := c.Request()
+	r.ParseForm()
+	roomId := r.FormValue("roomId")
+	name := r.FormValue("name")
+	gName := r.FormValue("gName")
+	clientType := r.FormValue("clientType")
+	sid := r.FormValue("sid")
+	rid, err := strconv.ParseInt(roomId, 10, 64)
+	if err != nil {
+		return err, nil
+	}
+	cType, err := strconv.ParseInt(clientType, 10, 64)
+	if err != nil {
+		return err, nil
+	}
+	var gameRoom *Room
+	if roomId != "" {
+		if c, ok := room[int(rid)]; !ok {
+			return RoomNotExist, nil
+		} else {
+			gameRoom = c
+		}
+	} else {
+		gameRoom = initARoom(gName)
+	}
+	client := NewConn(c, int(cType))
+	return gameRoom.Add(client), client
 }
