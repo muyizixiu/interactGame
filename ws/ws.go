@@ -3,6 +3,7 @@ package ws
 import (
 	"encoding/json"
 	"fmt"
+	"groups/log"
 	"strconv"
 	"sync"
 
@@ -23,20 +24,24 @@ type Key struct {
 
 func init() {
 	room = make(map[int]*Room, 10)
-	room0 := initARoom()
-	room1 := initARoom()
+	room0 := initARoom("chess")
+	room1 := initARoom("chess")
 	room[room0.Id] = room0
 	room[room1.Id] = room1
 }
 
 type Conn struct {
-	Conn *websocket.Conn
-	Id   int
-	Mask int
-	Sid  int
+	Conn       *websocket.Conn
+	Id         int
+	Mask       int
+	Sid        int
+	Name       string
+	ClientType int
+	Room       *Room
 }
 
 func (c *Conn) Write(d Data) error {
+	fmt.Println(d, string(d.Conntent))
 	switch d.Type {
 	case 1:
 		c.Conn.Write(d.Conntent)
@@ -48,7 +53,7 @@ func (c *Conn) Write(d Data) error {
 func NewConn(c *websocket.Conn, rid int) *Conn {
 	IdNum++ //parallel bug
 	con := &Conn{Id: ((rid << 8) + IdNum), Conn: c}
-	room[rid].Add(con)
+	con.ClientType = rid
 	return con
 }
 func (c Conn) GetClientId() int {
@@ -64,12 +69,47 @@ type Room struct {
 	Id            int
 	ClientsLeft   []*Conn
 	Clients_r     map[int]map[int]*Conn
-	RoomGame      string //房间所属游戏的名字
-	config        RoomConfig
+	GameName      string //房间所属游戏的名字
+}
+
+func (r Room) IsOverLimit(t int) bool {
+	if m, ok := r.Clients_r[t]; ok {
+		return IsOverLimit(r.GameName, t, len(m))
+	}
+	log.Log("no such limit at " + r.GameName + " at " + strconv.Itoa(t))
+	print("room")
+	return true
 }
 
 //房间配置信息,决定房间有多少人，房间基础信息
-type RoomConfig struct{}
+type RoomConfig struct {
+	GameName string
+	Limit    map[int]int
+}
+
+func (r RoomConfig) IsOverLimit(t int, total int) bool {
+	if limit, ok := r.Limit[t]; ok {
+		fmt.Print("total limit", total, limit)
+		return total >= limit
+	} //！ok 应该做错误日志
+	log.Log("fatal: no such game limit: " + r.GameName + " at " + strconv.Itoa(t)) //这个日志意味着有程序内部错误
+	return true
+}
+
+var roomConfig map[string]RoomConfig
+
+func IsOverLimit(name string, t, total int) bool {
+	if r, ok := roomConfig[name]; ok {
+		return r.IsOverLimit(t, total)
+	}
+	log.Log("no such game :" + name)
+	return true
+}
+
+func init() {
+	roomConfig = make(map[string]RoomConfig, 4)
+	roomConfig["chess"] = RoomConfig{GameName: "chess", Limit: map[int]int{0: 2, 1: 10}} //做个自动生成模块
+}
 
 var roomId = struct {
 	Id     int
@@ -85,15 +125,22 @@ func GetRoomId() int {
 
 //初始化一个房间，读取json配置，载入房间配置
 func initARoom(gName string) *Room {
-	r := &Room{Clients: make(map[int]*Conn), SharedDataQue: make(chan Data, 10)}
+	r := &Room{Clients_r: make(map[int]map[int]*Conn), SharedDataQue: make(chan Data, 10)}
+	r.Clients_r[0] = make(map[int]*Conn, 10) //@todo against config rules to initiate map
+	r.Clients_r[1] = make(map[int]*Conn, 10) //@todo against config rules to initiate map
 	r.Id = GetRoomId()
+	r.GameName = gName
+	room[r.Id] = r
 	go r.initChan()
 	return r
 }
 
 //put client into room against game rule defined by game name
 func (r *Room) Add(c *Conn) error {
-	r.Clients[c.Id] = c
+	if r.IsOverLimit(c.ClientType) {
+		return errors.New("over limit against game rules")
+	}
+	r.Clients_r[c.ClientType][c.Id] = c //map 未初始化,没有锁@todo
 	return nil
 }
 func (r *Room) Del(c *Conn) {
@@ -104,12 +151,14 @@ func (r *Room) Receive(d Data) {
 }
 func (r *Room) initChan() {
 	for v := range r.SharedDataQue {
-		for i, d := range r.Clients {
-			println(i, v.From)
-			if i == v.From {
-				continue
+		for _, b := range r.Clients_r {
+			for i, d := range b {
+				println(i, v.From.Id)
+				if i == v.From.Id {
+					continue
+				}
+				d.Write(v)
 			}
-			d.Write(v)
 		}
 	}
 }
@@ -117,38 +166,21 @@ func (r *Room) initChan() {
 type Data struct {
 	Type     int
 	Conntent []byte
-	From     int
+	From     *Conn
 	Time     int64
 }
 
 var WsHandler websocket.Handler = func(con *websocket.Conn) {
-	InitAConn(con)
+	c, err := InitAConn(con)
+	if err != nil {
+		con.Write([]byte("wrong happen")) //@todo something can be parsed by client and ready to close connection
+		fmt.Println(err)
+		return
+	}
+	con.Write([]byte("{\"rid\":" + strconv.Itoa(c.Room.Id) + "}"))
 	switch con.Request().URL.Path {
 	case "/":
-		c := NewConn(con, 0)
-		for {
-			msg := make([]byte, 1024)
-			n, err := con.Read(msg)
-			fmt.Println(string(msg))
-			if err != nil {
-				println(err.Error())
-				return
-			}
-			if r, ok := room[0]; ok {
-				r.Receive(Data{Type: 1, Conntent: msg[:n], From: c.Id})
-			}
-		}
-	case "/mv":
-		c := NewConn(con, 1)
-		con.Write([]byte("{\"d\":" + strconv.Itoa(int(c.Id)) + "}"))
-		if len(room[1].ClientsLeft) < 1 {
-			room[1].ClientsLeft = append(room[1].ClientsLeft, c)
-		} else {
-			p := room[1].ClientsLeft[0]
-			room[1].ClientsLeft = room[1].ClientsLeft[1:]
-			con.Write([]byte("{\"p\":" + strconv.Itoa(int(p.Id)) + "}"))
-			p.Conn.Write([]byte("{\"p\":" + strconv.Itoa(int(c.Id)) + "}"))
-		}
+		var buffer []byte
 		for {
 			msg := make([]byte, 1024)
 			n, err := con.Read(msg)
@@ -156,9 +188,13 @@ var WsHandler websocket.Handler = func(con *websocket.Conn) {
 				println(err.Error())
 				return
 			}
-			if r, ok := room[1]; ok {
-				r.Receive(Data{Type: 1, Conntent: msg[:n], From: c.Id})
+			buffer = append(buffer, msg[:n]...)
+			if n >= 1024 {
+				continue
 			}
+			r := c.Room
+			r.Receive(Data{Type: 1, Conntent: append([]byte{}, buffer...), From: c})
+			buffer = nil
 		}
 	case "/gobang":
 		msg := make([]byte, 1024)
@@ -177,7 +213,7 @@ var WsHandler websocket.Handler = func(con *websocket.Conn) {
 				return
 			}
 			if r, ok := room[1]; ok {
-				r.Receive(Data{Type: 1, Conntent: msg[:n], From: c.Id})
+				r.Receive(Data{Type: 1, Conntent: msg[:n], From: c})
 			}
 		}
 	}
@@ -195,26 +231,30 @@ func getRoomId(msg []byte) int {
 }
 
 //初始化一个连接，配置好进入游戏房间，加载房间配置,解析客户端请求,向客户端写入初始化数据
-func InitAConn(c *websocket.Conn) (error, *Conn) {
+func InitAConn(c *websocket.Conn) (*Conn, error) {
 	r := c.Request()
 	r.ParseForm()
 	roomId := r.FormValue("roomId")
 	name := r.FormValue("name")
 	gName := r.FormValue("gName")
 	clientType := r.FormValue("clientType")
-	sid := r.FormValue("sid")
+	sidStr := r.FormValue("sid")
 	rid, err := strconv.ParseInt(roomId, 10, 64)
 	if err != nil {
-		return err, nil
+		rid = 0
 	}
 	cType, err := strconv.ParseInt(clientType, 10, 64)
 	if err != nil {
-		return err, nil
+		cType = 0
+	}
+	sid, err := strconv.ParseInt(sidStr, 10, 64)
+	if err != nil {
+		sid = 0
 	}
 	var gameRoom *Room
 	if roomId != "" {
 		if c, ok := room[int(rid)]; !ok {
-			return RoomNotExist, nil
+			return nil, RoomNotExist
 		} else {
 			gameRoom = c
 		}
@@ -222,5 +262,8 @@ func InitAConn(c *websocket.Conn) (error, *Conn) {
 		gameRoom = initARoom(gName)
 	}
 	client := NewConn(c, int(cType))
-	return gameRoom.Add(client), client
+	client.Name = name
+	client.Sid = int(sid)
+	client.Room = gameRoom
+	return client, gameRoom.Add(client)
 }
