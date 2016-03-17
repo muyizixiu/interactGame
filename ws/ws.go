@@ -6,16 +6,54 @@ import (
 	"groups/log"
 	"strconv"
 	"sync"
+	"time"
 
 	"golang.org/x/net/websocket"
 )
 import "errors"
 
+const BEGIN = 0
+const RUNNING = 1
+const WAITING = 0
 const IdMask = 0x0f
 
 var RoomNotExist = errors.New("room not exist")
 var IdNum = 0
-var room map[int]*Room
+var roomManager *RoomManager
+
+type RoomManager struct {
+	Rooms  map[int]*Room
+	Match  map[string][]*Room
+	locker sync.Mutex
+}
+
+func init() {
+	roomManager = &RoomManager{Rooms: make(map[int]*Room, 10), Match: make(map[string][]*Room, 10), locker: sync.Mutex{}}
+}
+func (m *RoomManager) CloseARoom(r Room) {
+	delete(m.Rooms, r.Id)
+}
+func (m *RoomManager) Add(r *Room) {
+	m.locker.Lock()
+	defer m.locker.Unlock()
+	m.Rooms[r.Id] = r
+	if r.Status == WAITING {
+		m.Match[r.GameName] = append(m.Match[r.GameName], r)
+	}
+}
+func (m *RoomManager) GetAvaliableRoom(game string) *Room {
+	m.locker.Lock()
+	defer m.locker.Unlock()
+	if list, ok := m.Match[game]; ok {
+		for i, v := range list {
+			if list[i].Status == WAITING {
+				m.Match[game] = m.Match[game][i+1:]
+				return v
+			}
+		}
+	}
+	return nil
+}
 
 type Key struct {
 	RoomId int
@@ -23,11 +61,6 @@ type Key struct {
 }
 
 func init() {
-	room = make(map[int]*Room, 10)
-	room0 := initARoom("chess")
-	room1 := initARoom("chess")
-	room[room0.Id] = room0
-	room[room1.Id] = room1
 }
 
 type Conn struct {
@@ -41,13 +74,18 @@ type Conn struct {
 }
 
 func (c *Conn) Write(d Data) error {
-	fmt.Println(d, string(d.Conntent))
 	switch d.Type {
 	case 1:
-		c.Conn.Write(d.Conntent)
+		c.Conn.Write(d.Content)
 		return nil
 	}
 	return errors.New("not found")
+}
+
+func (c *Conn) Close() {
+	if c.Room != nil {
+		c.Room.DeleteConn(c)
+	}
 }
 
 func NewConn(c *websocket.Conn, rid int) *Conn {
@@ -65,6 +103,7 @@ func (c Conn) GetRoomId() int {
 
 type Room struct {
 	Clients       map[int]*Conn
+	Status        int
 	SharedDataQue chan Data
 	Id            int
 	ClientsLeft   []*Conn
@@ -72,19 +111,37 @@ type Room struct {
 	GameName      string //房间所属游戏的名字
 }
 
+func (r *Room) ShouldStart() bool {
+	m := make(map[int]int)
+	for i, v := range r.Clients_r {
+		m[i] = len(v)
+	}
+	for i, v := range roomConfig[r.GameName].Start {
+		if m[i] < v {
+			return false
+		}
+	}
+	return true
+}
 func (r Room) IsOverLimit(t int) bool {
 	if m, ok := r.Clients_r[t]; ok {
 		return IsOverLimit(r.GameName, t, len(m))
 	}
 	log.Log("no such limit at " + r.GameName + " at " + strconv.Itoa(t))
-	print("room")
 	return true
+}
+
+func (r *Room) DeleteConn(c *Conn) {
+	if m, ok := r.Clients_r[c.ClientType]; ok {
+		delete(m, c.Id)
+	}
 }
 
 //房间配置信息,决定房间有多少人，房间基础信息
 type RoomConfig struct {
 	GameName string
 	Limit    map[int]int
+	Start    map[int]int //the rules of start a game
 }
 
 func (r RoomConfig) IsOverLimit(t int, total int) bool {
@@ -108,7 +165,7 @@ func IsOverLimit(name string, t, total int) bool {
 
 func init() {
 	roomConfig = make(map[string]RoomConfig, 4)
-	roomConfig["chess"] = RoomConfig{GameName: "chess", Limit: map[int]int{0: 2, 1: 10}} //做个自动生成模块
+	roomConfig["chess"] = RoomConfig{GameName: "chess", Limit: map[int]int{0: 2, 1: 10}, Start: map[int]int{0: 2}} //做个自动生成模块
 }
 
 var roomId = struct {
@@ -130,8 +187,9 @@ func initARoom(gName string) *Room {
 	r.Clients_r[1] = make(map[int]*Conn, 10) //@todo against config rules to initiate map
 	r.Id = GetRoomId()
 	r.GameName = gName
-	room[r.Id] = r
+	roomManager.Add(r)
 	go r.initChan()
+	go r.run()
 	return r
 }
 
@@ -163,11 +221,67 @@ func (r *Room) initChan() {
 	}
 }
 
+func (r *Room) run() { //@todo a better way to achieve the feature?
+	r.Status = WAITING
+	for {
+		time.Sleep(1000)
+		if r.ShouldStart() && r.Status == WAITING {
+			r.Status = RUNNING
+			r.Notify(BEGIN)
+		}
+		if r.IsEmpty() {
+			r.Close()
+		}
+	}
+}
+func (r Room) Notify(flag int) {
+	switch flag {
+	case BEGIN: //represent the start of game
+		sData := GameStartData{User: make(map[int]int, 10), Start: true}
+		for i, v := range r.Clients_r {
+			for id, _ := range v {
+				sData.User[id] = i
+			}
+		}
+		msg, err := json.Marshal(sData)
+		if err != nil {
+			return
+		}
+		d := Data{Type: 1, Content: msg, Time: time.Now().Unix()}
+		r.Broadcast(d)
+	}
+}
+
+func (r Room) IsEmpty() bool {
+	for _, v := range r.Clients_r {
+		if len(v) != 0 {
+			return false
+		}
+	}
+	return true
+}
+func (r Room) Close() {
+	close(r.SharedDataQue)
+	roomManager.CloseARoom(r)
+}
+func (r *Room) Broadcast(d Data) {
+	for _, v := range r.Clients_r {
+		for _, con := range v {
+			con.Write(d)
+		}
+	}
+}
+
 type Data struct {
-	Type     int
-	Conntent []byte
-	From     *Conn
-	Time     int64
+	Type    int
+	Content []byte
+	From    *Conn
+	Time    int64
+}
+
+type GameStartData struct {
+	User  map[int]int `json:"user"` //@todo should be user infomation?
+	Start bool        `json:"start"`
 }
 
 var WsHandler websocket.Handler = func(con *websocket.Conn) {
@@ -186,6 +300,7 @@ var WsHandler websocket.Handler = func(con *websocket.Conn) {
 			n, err := con.Read(msg)
 			if err != nil {
 				println(err.Error())
+				c.Close()
 				return
 			}
 			buffer = append(buffer, msg[:n]...)
@@ -193,28 +308,8 @@ var WsHandler websocket.Handler = func(con *websocket.Conn) {
 				continue
 			}
 			r := c.Room
-			r.Receive(Data{Type: 1, Conntent: append([]byte{}, buffer...), From: c})
+			r.Receive(Data{Type: 1, Content: append([]byte{}, buffer...), From: c})
 			buffer = nil
-		}
-	case "/gobang":
-		msg := make([]byte, 1024)
-		n, err := con.Read(msg)
-		if err != nil {
-			println(err.Error())
-			return
-		}
-		roomId := getRoomId(msg[:n])
-		c := NewConn(con, roomId)
-		for {
-			msg := make([]byte, 1024)
-			n, err := con.Read(msg)
-			if err != nil {
-				println(err.Error())
-				return
-			}
-			if r, ok := room[1]; ok {
-				r.Receive(Data{Type: 1, Conntent: msg[:n], From: c})
-			}
 		}
 	}
 }
@@ -238,6 +333,7 @@ func InitAConn(c *websocket.Conn) (*Conn, error) {
 	name := r.FormValue("name")
 	gName := r.FormValue("gName")
 	clientType := r.FormValue("clientType")
+	act := r.FormValue("act")
 	sidStr := r.FormValue("sid")
 	rid, err := strconv.ParseInt(roomId, 10, 64)
 	if err != nil {
@@ -253,13 +349,21 @@ func InitAConn(c *websocket.Conn) (*Conn, error) {
 	}
 	var gameRoom *Room
 	if roomId != "" {
-		if c, ok := room[int(rid)]; !ok {
+		if c, ok := roomManager.Rooms[int(rid)]; !ok {
 			return nil, RoomNotExist
 		} else {
 			gameRoom = c
 		}
 	} else {
-		gameRoom = initARoom(gName)
+		switch act {
+		case "join":
+			gameRoom = roomManager.GetAvaliableRoom(gName)
+		default:
+			gameRoom = initARoom(gName)
+		}
+	}
+	if gameRoom == nil {
+		return nil, errors.New("no such game room")
 	}
 	client := NewConn(c, int(cType))
 	client.Name = name
