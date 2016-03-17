@@ -52,6 +52,7 @@ to {background: #fff;width: 40px;height:40px;border-radius:40px;}
 <body>
 <div id="plat"></div>
 <script type="text/javascript">
+	var start =false;
 	var url="ws://172.20.152.154:81/?";
 	var me={
 		name:"yang",
@@ -94,6 +95,7 @@ if(urlPara["clientType"]){
 	me.clientType=urlPara["clientType"];
 }
 CreateUrl("gName")
+CreateUrl("act")
 function CreateUrl(str){
 if(urlPara[str]){
 	url=url+"&"+str+"="+urlPara[str];
@@ -115,6 +117,9 @@ socket.onopen = function(event) {
 	    if(data.X&&data.Y){
   		GetChess(data.X,data.Y);
 	    }
+    if(data.start){
+    	start=true
+    }
   console.log(data)
   }; 
 
@@ -127,7 +132,7 @@ socket.onopen = function(event) {
   //socket.close() 
 };
 	function PutChess(x,y){
-	    if(me.clientType!=0||lock){
+	    if(!start||me.clientType!=0||lock){
 		    return
 	    }
 		json='{"X":'+x+',"Y":'+y+",\"clientType\":"+me.clientType+'}'

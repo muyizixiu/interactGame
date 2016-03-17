@@ -117,6 +117,7 @@ func (r *Room) ShouldStart() bool {
 		m[i] = len(v)
 	}
 	for i, v := range roomConfig[r.GameName].Start {
+		println("ShouldStart", m[i], v)
 		if m[i] < v {
 			return false
 		}
@@ -199,6 +200,7 @@ func (r *Room) Add(c *Conn) error {
 		return errors.New("over limit against game rules")
 	}
 	r.Clients_r[c.ClientType][c.Id] = c //map 未初始化,没有锁@todo
+	r.ShouldStart()
 	return nil
 }
 func (r *Room) Del(c *Conn) {
@@ -224,12 +226,12 @@ func (r *Room) initChan() {
 func (r *Room) run() { //@todo a better way to achieve the feature?
 	r.Status = WAITING
 	for {
-		time.Sleep(1000)
+		time.Sleep(1 * time.Second)
 		if r.ShouldStart() && r.Status == WAITING {
 			r.Status = RUNNING
 			r.Notify(BEGIN)
 		}
-		if r.IsEmpty() {
+		if r.IsEmpty() && r.Status == RUNNING {
 			r.Close()
 		}
 	}
@@ -237,14 +239,15 @@ func (r *Room) run() { //@todo a better way to achieve the feature?
 func (r Room) Notify(flag int) {
 	switch flag {
 	case BEGIN: //represent the start of game
-		sData := GameStartData{User: make(map[int]int, 10), Start: true}
+		sData := GameStartData{User: make(map[string]int, 10), Start: true}
 		for i, v := range r.Clients_r {
 			for id, _ := range v {
-				sData.User[id] = i
+				sData.User[strconv.Itoa(id)] = i
 			}
 		}
 		msg, err := json.Marshal(sData)
 		if err != nil {
+			println(err.Error())
 			return
 		}
 		d := Data{Type: 1, Content: msg, Time: time.Now().Unix()}
@@ -265,6 +268,7 @@ func (r Room) Close() {
 	roomManager.CloseARoom(r)
 }
 func (r *Room) Broadcast(d Data) {
+	fmt.Println("data", d)
 	for _, v := range r.Clients_r {
 		for _, con := range v {
 			con.Write(d)
@@ -280,8 +284,8 @@ type Data struct {
 }
 
 type GameStartData struct {
-	User  map[int]int `json:"user"` //@todo should be user infomation?
-	Start bool        `json:"start"`
+	User  map[string]int `json:"user"` //@todo should be user infomation?
+	Start bool           `json:"start"`
 }
 
 var WsHandler websocket.Handler = func(con *websocket.Conn) {
@@ -355,6 +359,7 @@ func InitAConn(c *websocket.Conn) (*Conn, error) {
 			gameRoom = c
 		}
 	} else {
+		println(act)
 		switch act {
 		case "join":
 			gameRoom = roomManager.GetAvaliableRoom(gName)
