@@ -13,7 +13,7 @@
 		width: 1000px;
 		background-image: url(./flat.png);
 		background-repeat: repeat;
-		margin:10px auto;
+		margin:auto auto;
 		position:relative;
 	}
 	.chess{
@@ -26,7 +26,41 @@
 from {background: #666;width: 1px;height:1px;border-radius: 1px;}
 to {background: #000;width: 40px;height:40px;border-radius:40px;}
 }
-@keyframes whiteChess{
+
+	@-moz-keyframes blackChess{
+from {background: #666;width: 1px;height:1px;border-radius: 1px;}
+to {background: #000;width: 40px;height:40px;border-radius:40px;}
+}
+
+	@-webkit-keyframes blackChess{
+from {background: #666;width: 1px;height:1px;border-radius: 1px;}
+to {background: #000;width: 40px;height:40px;border-radius:40px;}
+}
+
+	@-o-keyframes blackChess{
+from {background: #666;width: 1px;height:1px;border-radius: 1px;}
+to {background: #000;width: 40px;height:40px;border-radius:40px;}
+}
+	@keyframes blackChess{
+from {background: #666;width: 1px;height:1px;border-radius: 1px;}
+to {background: #000;width: 40px;height:40px;border-radius:40px;}
+}
+	@keyframes whiteChess{
+from {background: #ddd;width: 1px;height:1px;border-radius: 1px;}
+to {background: #fff;width: 40px;height:40px;border-radius:40px;}
+}
+
+	@-moz-keyframes whiteChess{
+from {background: #ddd;width: 1px;height:1px;border-radius: 1px;}
+to {background: #fff;width: 40px;height:40px;border-radius:40px;}
+}
+
+	@-webkit-keyframes whiteChess{
+from {background: #ddd;width: 1px;height:1px;border-radius: 1px;}
+to {background: #fff;width: 40px;height:40px;border-radius:40px;}
+}
+
+	@-o-keyframes whiteChess{
 from {background: #ddd;width: 1px;height:1px;border-radius: 1px;}
 to {background: #fff;width: 40px;height:40px;border-radius:40px;}
 }
@@ -52,7 +86,7 @@ to {background: #fff;width: 40px;height:40px;border-radius:40px;}
 <div id="plat"></div>
 <script type="text/javascript">
 	var start =false;
-	var url="ws://192.168.1.130:81/?";
+	var url="ws://172.20.152.154:81/?";
 	var me={
 		name:"yang",
 		clientType:0,
@@ -86,6 +120,17 @@ to {background: #fff;width: 40px;height:40px;border-radius:40px;}
          PutChess(x,y);
      }
 	}
+	 main.touchstart=function  (event) {
+		// body...
+		x=event.x;
+		x=x-main.offsetLeft;
+		x=Math.round(x/100);
+         y=event.y;
+         y=Math.round(y/100);
+         if (IsAllowed(x,y)){
+         PutChess(x,y);
+     }
+	 }
 	// 创建一个Socket实例
 if(urlPara["roomId"]){
 	url=url+"roomId="+urlPara["roomId"];
@@ -117,8 +162,20 @@ socket.onopen = function(event) {
 	    if(data.X&&data.Y){
   		GetChess(data.X,data.Y);
 	    }
+    if(data.end){
+    	//alert("your enemy has fleed away!");
+	    alert("对方已经逃离战场，我们赢了!")
+	lock=true;
+		return
+    }
+    if(data.error){
+    	 window.location.href="http://172.20.152.154/chess"; 
+	 return
+    }
     if(data.start){
-    	start=true
+	    start=true;
+	    //alert("the battle has been lauched!");
+	    alert("开始了，点击就送!")
     }
   console.log(data)
   }; 

@@ -16,6 +16,7 @@ const BEGIN = 0
 const RUNNING = 1
 const WAITING = 0
 const CLOSING = 2
+const ENDGAME = 3
 const IdMask = 0x0f
 
 var RoomNotExist = errors.New("room not exist")
@@ -118,7 +119,6 @@ func (r *Room) ShouldStart() bool {
 		m[i] = len(v)
 	}
 	for i, v := range roomConfig[r.GameName].Start {
-		println("ShouldStart", m[i], v)
 		if m[i] < v {
 			return false
 		}
@@ -136,7 +136,21 @@ func (r Room) IsOverLimit(t int) bool {
 func (r *Room) DeleteConn(c *Conn) {
 	if m, ok := r.Clients_r[c.ClientType]; ok {
 		delete(m, c.Id)
+		r.EndGame()
 	}
+}
+func (r *Room) EndGame() {
+	if r.SatisfyEndRule() {
+		r.Notify(ENDGAME)
+	}
+}
+func (r *Room) SatisfyEndRule() bool {
+	for i, v := range roomConfig[r.GameName].End {
+		if len(r.Clients_r[i]) <= v {
+			return true
+		}
+	}
+	return false
 }
 
 //房间配置信息,决定房间有多少人，房间基础信息
@@ -144,6 +158,7 @@ type RoomConfig struct {
 	GameName string
 	Limit    map[int]int
 	Start    map[int]int //the rules of start a game
+	End      map[int]int // the rules of end a game
 }
 
 func (r RoomConfig) IsOverLimit(t int, total int) bool {
@@ -167,7 +182,7 @@ func IsOverLimit(name string, t, total int) bool {
 
 func init() {
 	roomConfig = make(map[string]RoomConfig, 4)
-	roomConfig["chess"] = RoomConfig{GameName: "chess", Limit: map[int]int{0: 2, 1: 10}, Start: map[int]int{0: 2}} //做个自动生成模块
+	roomConfig["chess"] = RoomConfig{GameName: "chess", Limit: map[int]int{0: 2, 1: 10}, Start: map[int]int{0: 2}, End: map[int]int{0: 1}} //做个自动生成模块
 }
 
 var roomId = struct {
@@ -255,6 +270,9 @@ func (r Room) Notify(flag int) {
 		}
 		d := Data{Type: 1, Content: msg, Time: time.Now().Unix()}
 		r.Broadcast(d)
+	case ENDGAME:
+		d := Data{Type: 1, Content: []byte("{\"end\":true}"), Time: time.Now().Unix()} //@todo struct the broadcast message
+		r.Broadcast(d)
 	}
 }
 
@@ -294,7 +312,7 @@ type GameStartData struct {
 var WsHandler websocket.Handler = func(con *websocket.Conn) {
 	c, err := InitAConn(con)
 	if err != nil {
-		con.Write([]byte("wrong happen")) //@todo something can be parsed by client and ready to close connection
+		con.Write([]byte("{\"error\":\"wrong happen\"}")) //@todo something can be parsed by client and ready to close connection
 		fmt.Println(err)
 		return
 	}
