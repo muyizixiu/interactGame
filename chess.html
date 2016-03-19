@@ -3,18 +3,35 @@
 <head>
 	<title>chess</title>
 	<style type="text/css">
+		body,html{
+			height:100%;
+			width:100%;
+			margin:0px;
+			padding:0px;
+		}
 	#main{
 		height: 1200px;
 		width: 1200px;
 		border:1px solid #333;
 	}
+	#loading{
+		position:absolute;
+		left:50%;
+		margin-top:100px;
+		margin-left:-200px;
+		width:400px;
+		height:400px;
+	}
 	#plat{
-		height: 1000px;
-		width: 1000px;
-		background-image: url(./flat.png);
+		height: 900px;
+		width: 1200px;
+		background-image: url(web.png);
 		background-repeat: repeat;
-		margin:auto auto;
-		position:relative;
+		position:absolute;
+		top:50%;
+		left:50%;
+		margin-top:-450px;
+		margin-left:-600px;
 	}
 	.chess{
 		height: 98px;
@@ -23,70 +40,80 @@
 		position:absolute;
 	}
 	@keyframes blackChess{
-from {background: #666;width: 1px;height:1px;border-radius: 1px;}
-to {background: #000;width: 40px;height:40px;border-radius:40px;}
+0% {background: #666;width: 1px;height:1px;}
+to {background: #000;width: 50px;height:50px;}
 }
 
 	@-moz-keyframes blackChess{
-from {background: #666;width: 1px;height:1px;border-radius: 1px;}
-to {background: #000;width: 40px;height:40px;border-radius:40px;}
+0% {background: #666;width: 1px;height:1px;}
+to {background: #000;width: 50px;height:50px;}
 }
 
 	@-webkit-keyframes blackChess{
-from {background: #666;width: 1px;height:1px;border-radius: 1px;}
-to {background: #000;width: 40px;height:40px;border-radius:40px;}
+0% {background: #666;width: 1px;height:1px;}
+100% {background: #000;width: 50px;height:50px;}
 }
 
 	@-o-keyframes blackChess{
-from {background: #666;width: 1px;height:1px;border-radius: 1px;}
-to {background: #000;width: 40px;height:40px;border-radius:40px;}
-}
-	@keyframes blackChess{
-from {background: #666;width: 1px;height:1px;border-radius: 1px;}
-to {background: #000;width: 40px;height:40px;border-radius:40px;}
+0% {background: #666;width: 1px;height:1px;}
+100% {background: #000;width: 50px;height:50px;}
 }
 	@keyframes whiteChess{
-from {background: #ddd;width: 1px;height:1px;border-radius: 1px;}
-to {background: #fff;width: 40px;height:40px;border-radius:40px;}
+0% {background: #ddd;width: 1px;height:1px;}
+100% {background: #fff;width: 50px;height:50px;}
 }
 
 	@-moz-keyframes whiteChess{
-from {background: #ddd;width: 1px;height:1px;border-radius: 1px;}
-to {background: #fff;width: 40px;height:40px;border-radius:40px;}
+0% {background: #ddd;width: 1px;height:1px;}
+100% {background: #fff;width: 50px;height:50px;}
 }
 
 	@-webkit-keyframes whiteChess{
-from {background: #ddd;width: 1px;height:1px;border-radius: 1px;}
-to {background: #fff;width: 40px;height:40px;border-radius:40px;}
+0% {background: #ddd;width: 1px;height:1px;}
+100% {background: #fff;width: 50px;height:50px;}
 }
 
 	@-o-keyframes whiteChess{
-from {background: #ddd;width: 1px;height:1px;border-radius: 1px;}
-to {background: #fff;width: 40px;height:40px;border-radius:40px;}
+0% {background: #ddd;width: 1px;height:1px;}
+100% {background: #fff;width: 50px;height:50px;}
 }
 .shit{
 		border:2px solid #444;
-		height: 10px;
-		width: 1px;
+		height: 40px;
+		width: 40px;
+		border-radius:50%;
 		position: absolute;
-		animation: blackChess 2s forwards;
+		animation: blackChess 1s forwards;
+		-webkit-animation: blackChess 1s forwards;
 	}
 	.whiteChess{
 
 
 		border:2px solid #eee;
-		height: 10px;
-		width: 1px;
+		height: 40px;
+		width: 40px;
+		border-radius:50%;
 		position: absolute;
-		animation: whiteChess 2s forwards;
+		animation: whiteChess 1s forwards;
+		-webkit-animation: whiteChess 1s forwards;
 	}
 	</style>
 </head>
 <body>
 <div id="plat"></div>
+<img src="loading.gif" id="loading">loading....</img>
 <script type="text/javascript">
+	main=document.getElementById('plat');
+	var mobile =false;
+	if(screen.width<screen.height){
+		main.style.height="1200px";
+		main.style.width="900px";
+		main.style.marginLeft="-450px";
+		main.style.marginTop="-600px";
+		mobile=true; 
+	}
 	var start =false;
-	var url="ws://172.20.152.154:81/?";
+	var url="ws://192.168.2.111:81/?";
 	var me={
 		name:"yang",
 		clientType:0,
@@ -97,7 +124,6 @@ to {background: #fff;width: 40px;height:40px;border-radius:40px;}
 			   roomId:0,
 	}
 	init()
-	main=document.getElementById('plat');
 	var plat=new Array();
 	var lock=false;
 	for (var i = 0; i <=12; i++) {
@@ -111,10 +137,9 @@ to {background: #fff;width: 40px;height:40px;border-radius:40px;}
 	}
 	main.onclick=function  (event) {
 		// body...
-		x=event.x;
-		x=x-main.offsetLeft;
+		x=event.offsetX;
 		x=Math.round(x/100);
-         y=event.y;
+         y=event.offsetY;
          y=Math.round(y/100);
          if (IsAllowed(x,y)){
          PutChess(x,y);
@@ -122,11 +147,11 @@ to {background: #fff;width: 40px;height:40px;border-radius:40px;}
 	}
 	 main.touchstart=function  (event) {
 		// body...
-		x=event.x;
-		x=x-main.offsetLeft;
+		x=event.offsetX;
 		x=Math.round(x/100);
-         y=event.y;
+         y=event.offsetY;
          y=Math.round(y/100);
+	 console.log(mobile);
          if (IsAllowed(x,y)){
          PutChess(x,y);
      }
@@ -169,11 +194,12 @@ socket.onopen = function(event) {
 		return
     }
     if(data.error){
-    	 window.location.href="http://172.20.152.154/chess"; 
+    	 window.location.href="http://192.168.2.111/chess"; 
 	 return
     }
     if(data.start){
 	    start=true;
+	    document.getElementById("loading").style.display="none";
 	    //alert("the battle has been lauched!");
 	    alert("开始了，点击就送!")
     }
@@ -189,16 +215,27 @@ socket.onopen = function(event) {
   //socket.close() 
 };
 	function PutChess(x,y){
+		console.log(lock,start);
 	    if(!start||me.clientType!=0||lock){
 		    return
 	    }
+	 if(mobile){
+		 a=x;
+	 	x=y;
+		y=a;
+	 }
 		json='{"X":'+x+',"Y":'+y+",\"clientType\":"+me.clientType+'}'
 			console.log(json)
 
 		socket.send(json);
+	 if(mobile){
+		 a=x;
+	 	x=y;
+		y=a;
+	 }
 			a=x;b=y;c=1;
-		x=x*100-15;
-		y=y*100-15;
+		x=x*100-25;
+		y=y*100-25;
 	chess=document.createElement("div")
 	chess.style.left=x+"px";
          chess.style.top=y+"px";
@@ -219,9 +256,14 @@ socket.onopen = function(event) {
 	}
 GlobalChess=true;	
 	function GetChess(x,y){
+	 if(mobile){
+		 a=x;
+	 	x=y;
+		y=a;
+	 }
 		a=x;b=y;
-		x=x*100-15;
-		y=y*100-15;
+		x=x*100-25;
+		y=y*100-25;
 	chess=document.createElement("div")
 	chess.style.left=x+"px";
          chess.style.top=y+"px";
@@ -345,6 +387,12 @@ GlobalChess=true;
 		if(n>=5){
 			alert("over");
 		}
+	}
+	if(screen.width<screen.height){
+		main.style.height="1200px";
+		main.style.width="900px";
+		main.style.marginLeft="-450px";
+		main.style.marginTop="-600px";
 	}
 </script>
 </body>

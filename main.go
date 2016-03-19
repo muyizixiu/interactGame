@@ -27,16 +27,41 @@ func main() {
 		w.Write(byt)
 	})
 	http.HandleFunc("/chess", func(w http.ResponseWriter, r *http.Request) {
-		f, err := os.Open("./chess.html")
-		defer f.Close()
+		r.ParseForm()
+		var f *os.File
+		var err error
+		if r.Form.Get("dev") == "mobile" {
+			f, err = os.Open("chess.mobile.html")
+		} else {
+			f, err = os.Open("chess.html")
+		}
 		if err != nil {
 			fmt.Println(err.Error())
 			return
 		}
+		defer f.Close()
 		io.Copy(w, f)
 	})
 	http.HandleFunc("/flat.png", func(w http.ResponseWriter, r *http.Request) {
-		f, err := os.Open("./flat.png")
+		f, err := os.Open("flat.png")
+		if err != nil {
+			fmt.Println(err.Error())
+			return
+		}
+		defer f.Close()
+		io.Copy(w, f)
+	})
+	http.HandleFunc("/web.png", func(w http.ResponseWriter, r *http.Request) {
+		f, err := os.Open("web.png")
+		if err != nil {
+			fmt.Println(err.Error())
+			return
+		}
+		defer f.Close()
+		io.Copy(w, f)
+	})
+	http.HandleFunc("/loading.gif", func(w http.ResponseWriter, r *http.Request) {
+		f, err := os.Open("loading.gif")
 		if err != nil {
 			fmt.Println(err.Error())
 			return
@@ -50,6 +75,7 @@ func main() {
 		err := http.ListenAndServe(":80", nil)
 		fmt.Println(err.Error())
 	}()
+	println("server listen at 81 port")
 	err := http.ListenAndServe(":81", ws.WsHandler)
 	fmt.Println(err.Error())
 }

@@ -29,8 +29,28 @@ type RoomManager struct {
 	locker sync.Mutex
 }
 
+func (m RoomManager) SeeEveryRoom() {
+	var oldStr string
+	for {
+		time.Sleep(2 * time.Second)
+		var str string
+		for i, v := range m.Rooms {
+			for j, k := range v.Clients_r {
+				if len(k) > 0 {
+					str += fmt.Sprintf("at room \033[31m%d\033[0m there are \033[31m%d \033[0mclients with type \033[31m%d \033[0m \n", i, len(k), j)
+				}
+			}
+		}
+		if str != oldStr {
+			oldStr = str
+			fmt.Println(oldStr)
+		}
+	}
+}
+
 func init() {
 	roomManager = &RoomManager{Rooms: make(map[int]*Room, 10), Match: make(map[string][]*Room, 10), locker: sync.Mutex{}}
+	go roomManager.SeeEveryRoom()
 }
 func (m *RoomManager) CloseARoom(r Room) {
 	delete(m.Rooms, r.Id)

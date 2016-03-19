@@ -1,0 +1,403 @@
+<!DOCTYPE html > 
+<html>
+<head>
+	<title>chess-mobile</title>
+	<style type="text/css">
+		body,html{
+			height:100%;
+			width:100%;
+			margin:0px;
+			padding:0px;
+		}
+	#main{
+		height: 1200px;
+		width: 1200px;
+		border:1px solid #333;
+	}
+	#loading{
+		position:absolute;
+		left:50%;
+		margin-top:100px;
+		margin-left:-200px;
+		width:400px;
+		height:400px;
+	}
+	#plat{
+		height: 900px;
+		width: 1200px;
+		background-image: url(./flat.png);
+		background-repeat: repeat;
+		position:absolute;
+		top:50%;
+		left:50%;
+		margin-top:-450px;
+		margin-left:-600px;
+	}
+	.chess{
+		height: 98px;
+		width: 98px;
+		border: 1px solid #333;
+		position:absolute;
+	}
+	@keyframes blackChess{
+0% {background: #666;width: 1px;height:1px;}
+to {background: #000;width: 80px;height:80px;}
+}
+
+	@-moz-keyframes blackChess{
+0% {background: #666;width: 1px;height:1px;}
+to {background: #000;width: 80px;height:80px;}
+}
+
+	@-webkit-keyframes blackChess{
+0% {background: #666;width: 1px;height:1px;}
+100% {background: #000;width: 80px;height:80px;}
+}
+
+	@-o-keyframes blackChess{
+0% {background: #666;width: 1px;height:1px;}
+100% {background: #000;width: 80px;height:80px;}
+}
+	@keyframes whiteChess{
+0% {background: #ddd;width: 1px;height:1px;}
+100% {background: #fff;width: 80px;height:80px;}
+}
+
+	@-moz-keyframes whiteChess{
+0% {background: #ddd;width: 1px;height:1px;}
+100% {background: #fff;width: 80px;height:80px;}
+}
+
+	@-webkit-keyframes whiteChess{
+0% {background: #ddd;width: 1px;height:1px;}
+100% {background: #fff;width: 80px;height:80px;}
+}
+
+	@-o-keyframes whiteChess{
+0% {background: #ddd;width: 1px;height:1px;}
+100% {background: #fff;width: 80px;height:80px;}
+}
+.shit{
+		border:2px solid #444;
+		height: 40px;
+		width: 40px;
+		border-radius:50%;
+		position: absolute;
+		animation: blackChess 1s forwards;
+		-webkit-animation: blackChess 1s forwards;
+	}
+	.whiteChess{
+
+
+		border:2px solid #eee;
+		height: 40px;
+		width: 40px;
+		border-radius:50%;
+		position: absolute;
+		animation: whiteChess 1s forwards;
+		-webkit-animation: whiteChess 1s forwards;
+	}
+	</style>
+</head>
+<body>
+<div id="plat"></div>
+<img src="loading.gif" id="loading">loading....</img>
+<script type="text/javascript">
+	main=document.getElementById('plat');
+	var mobile =false;
+	if(screen.width<screen.height){
+		main.style.height="1200px";
+		main.style.width="900px";
+		main.style.marginLeft="-450px";
+		main.style.marginTop="-600px";
+		mobile=true; 
+	}
+	var start =false;
+	var url="ws://192.168.2.111:81/?";
+	var me={
+		name:"yang",
+		clientType:0,
+	}
+	var urlPara={
+		clientType:0,
+			   gName:"chess",
+			   roomId:0,
+	}
+	init()
+	var plat=new Array();
+	var lock=false;
+	for (var i = 0; i <=12; i++) {
+		plat[i]=[0,0,0,0,0,0,0,0,0,0,0,0,0]
+	};
+	function IsAllowed(x,y){
+		if (plat[x][y]==0){
+			return true
+		}
+		return false
+	}
+	main.onclick=function  (event) {
+		// body...
+		x=event.offsetX;
+		x=Math.round(x/100);
+         y=event.offsetY;
+         y=Math.round(y/100);
+         if (IsAllowed(x,y)){
+         PutChess(x,y);
+     }
+	}
+	 main.touchstart=function  (event) {
+		// body...
+		x=event.offsetX;
+		x=Math.round(x/100);
+         y=event.offsetY;
+         y=Math.round(y/100);
+	 console.log(mobile);
+         if (IsAllowed(x,y)){
+         PutChess(x,y);
+     }
+	 }
+	// 创建一个Socket实例
+if(urlPara["roomId"]){
+	url=url+"roomId="+urlPara["roomId"];
+}
+if(urlPara["clientType"]){
+	url=url+"&clientType="+urlPara["clientType"];
+	me.clientType=urlPara["clientType"];
+}
+CreateUrl("gName")
+CreateUrl("act")
+function CreateUrl(str){
+if(urlPara[str]){
+	url=url+"&"+str+"="+urlPara[str];
+}
+}
+console.log(url);
+var socket = new WebSocket(url); 
+// 打开Socket 
+socket.onopen = function(event) { 
+
+  // 发送一个初始化消息
+  //socket.send(""); 
+
+  // 监听消息
+  socket.onmessage = function(event) { 
+    console.log('Client received a message',event); 
+    data=JSON.parse(event.data)
+	    console.log(data)
+	    if(data.X&&data.Y){
+  		GetChess(data.X,data.Y);
+	    }
+    if(data.end){
+    	//alert("your enemy has fleed away!");
+	    alert("对方已经逃离战场，我们赢了!")
+	lock=true;
+		return
+    }
+    if(data.error){
+	    var para="";
+	    if(mobile){
+	    	para="?dev=mobile";
+	    }
+    	 window.location.href="http://192.168.2.111/chess"+para; 
+	 return
+    }
+    if(data.start){
+	    start=true;
+	    //alert("the battle has been lauched!");
+	    alert("开始了，点击就送!");
+	    document.getElementById("loading").style.display="none";
+    }
+  console.log(data)
+  }; 
+
+  // 监听Socket的关闭
+  socket.onclose = function(event) { 
+    console.log('Client notified socket has closed',event); 
+  
+  }; 
+  // 关闭Socket.... 
+  //socket.close() 
+};
+	function PutChess(x,y){
+		console.log(lock,start);
+	    if(!start||me.clientType!=0||lock){
+		    return
+	    }
+	 if(mobile){
+		 a=x;
+	 	x=y;
+		y=a;
+	 }
+		json='{"X":'+x+',"Y":'+y+",\"clientType\":"+me.clientType+'}'
+			console.log(json)
+
+		socket.send(json);
+	 if(mobile){
+		 a=x;
+	 	x=y;
+		y=a;
+	 }
+			a=x;b=y;c=1;
+		x=x*100-40;
+		y=y*100-40;
+	chess=document.createElement("div")
+	chess.style.left=x+"px";
+         chess.style.top=y+"px";
+	 if(GlobalChess){
+		chess.className="shit";
+		GlobalChess=false;
+		c=1;
+	 }else{
+		chess.className="whiteChess";
+		GlobalChess=true;
+		c=2;
+	 }
+		plat[a][b]=c;
+		checkPlat(c,a,b);
+		main.appendChild(chess);
+		
+		lock=true
+	}
+GlobalChess=true;	
+	function GetChess(x,y){
+	 if(mobile){
+		 a=x;
+	 	x=y;
+		y=a;
+	 }
+		a=x;b=y;
+		x=x*100-40;
+		y=y*100-40;
+	chess=document.createElement("div")
+	chess.style.left=x+"px";
+         chess.style.top=y+"px";
+	 c=1;
+	 if(GlobalChess){
+		chess.className="shit";
+		GlobalChess=false;
+		c=1
+	 }else{
+		chess.className="whiteChess";
+		GlobalChess=true;
+		c=2
+	 }
+		plat[a][b]=c
+		checkPlat(c,a,b);
+		main.appendChild(chess);
+
+		lock=false;
+	}
+	function init(){
+		location.search.substring(1).split("&").forEach(function(n){tmp=n.split("=");urlPara[tmp[0]]=tmp[1]});
+		console.log(urlPara);
+	}
+	function checkPlat(c,a,b){
+		if(c!=1&&c!=2){
+			return 0
+		}
+		n=function(){
+			x=a;y=b;
+		vict=false;
+		num=1;
+			left=true;
+			right=true;
+		for(var i=1;i<12;i++){
+			if(left){
+			if(plat[x-i][y]==c){
+			console.log("left*********",num,c,plat[x-i][y],x,y);
+				num++
+			}else{
+				left=false;
+			}
+			}
+			if(right){
+			if(plat[x+i][y]==c){
+			console.log("right*********",num,c,plat[x+i][y],x,y);
+				num++
+			}else{
+				right=false;
+			}
+			}
+			console.log("*********",num);
+			if(!right&&!left){
+				break;
+			}
+		}
+		if(num>=5){
+			return num;
+		}
+		num=1;
+		for(var i=1;i<12;i++){
+			if(!left){
+			if(plat[x][y-i]==c){
+				num++
+			}else{
+				left=true;
+			}
+			}
+			if(!right){
+			if(plat[x][y+i]==c){
+				num++
+			}else{
+				right=true;
+			}
+			}
+		}
+		if(num>=5){
+			return num;
+		}
+		num=1;
+		for(var i=1;i<12;i++){
+			if(left){
+			if(plat[x-i][y-i]==c){
+				num++
+			}else{
+				left=false;
+			}
+			}
+			if(right){
+			if(plat[x+i][y+i]==c){
+				num++
+			}else{
+				right=false;
+			}
+			}
+			if(!right&&!left){
+				break;
+			}
+		}
+		if(num>=5){
+			return num;
+		}
+		num=1;
+		for(var i=1;i<12;i++){
+			if(!left){
+			if(plat[x+i][y-i]==c){
+				num++
+			}else{
+				left=true;
+			}
+			}
+			if(!right){
+			if(plat[x-i][y+i]==c){
+				num++
+			}else{
+				right=true;
+			}
+			}
+		}
+		return num;
+		}()
+		if(n>=5){
+			alert("over");
+		}
+	}
+	if(screen.width<screen.height){
+		main.style.height="1200px";
+		main.style.width="900px";
+		main.style.marginLeft="-450px";
+		main.style.marginTop="-600px";
+	}
+</script>
+</body>
+</html>
