@@ -113,7 +113,8 @@ to {background: #000;width: 80px;height:80px;}
 		mobile=true; 
 	}
 	var start =false;
-	var url="ws://192.168.2.111:81/?";
+	//var url="ws://192.168.2.111:81/?";
+	var url="ws://172.20.152.154:81/?";
 	var me={
 		name:"yang",
 		clientType:0,
@@ -198,7 +199,8 @@ socket.onopen = function(event) {
 	    if(mobile){
 	    	para="?dev=mobile";
 	    }
-    	 window.location.href="http://192.168.2.111/chess"+para; 
+    	 window.location.href="http://172.20.152.154/chess"+para; 
+    	 //window.location.href="http://192.168.2.111/chess"+para; 
 	 return
     }
     if(data.start){

@@ -18,9 +18,19 @@
 		position:absolute;
 		left:50%;
 		margin-top:100px;
-		margin-left:-200px;
-		width:400px;
-		height:400px;
+		margin-left:-300px;
+		width:600px;
+		height:600px;
+		font-size:50px;
+		text-align:center;
+	}
+	#loading-text{
+		position:absolute;
+		top:60%;
+	}
+	#loading-img{
+		position:absolute;
+		left:0px;
 	}
 	#plat{
 		height: 900px;
@@ -101,7 +111,7 @@ to {background: #000;width: 50px;height:50px;}
 </head>
 <body>
 <div id="plat"></div>
-<img src="loading.gif" id="loading">loading....</img>
+<div id="loading"><span id="loading-text">loading....</span><img src="loading.gif" id="loading-img"></img></div>
 <script type="text/javascript">
 	main=document.getElementById('plat');
 	var mobile =false;
@@ -113,7 +123,8 @@ to {background: #000;width: 50px;height:50px;}
 		mobile=true; 
 	}
 	var start =false;
-	var url="ws://192.168.2.111:81/?";
+	//var url="ws://192.168.2.111:81/?";
+	var url="ws://172.20.152.154:81/?";
 	var me={
 		name:"yang",
 		clientType:0,
@@ -194,7 +205,7 @@ socket.onopen = function(event) {
 		return
     }
     if(data.error){
-    	 window.location.href="http://192.168.2.111/chess"; 
+    	 window.location.href="http://172.20.152.154/chess"; 
 	 return
     }
     if(data.start){

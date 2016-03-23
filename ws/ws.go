@@ -3,6 +3,10 @@ package ws
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"os"
+	"regexp"
+	"strings"
 	//"groups/log"
 	"strconv"
 	"sync"
@@ -18,15 +22,17 @@ const WAITING = 0
 const CLOSING = 2
 const ENDGAME = 3
 const IdMask = 0x0f
+const GAMECONFIGDIR = "game"
 
 var RoomNotExist = errors.New("room not exist")
 var IdNum = 0
 var roomManager *RoomManager
 
 type RoomManager struct {
-	Rooms  map[int]*Room
-	Match  map[string][]*Room
-	locker sync.Mutex
+	Rooms     map[int]*Room
+	Match     map[string][]*Room
+	ConfigDir string
+	locker    sync.Mutex
 }
 
 func (m RoomManager) SeeEveryRoom() {
@@ -96,12 +102,12 @@ type Conn struct {
 }
 
 func (c *Conn) Write(d Data) error {
+	d.putType()
 	switch d.Type {
-	case 1:
+	default:
 		c.Conn.Write(d.Content)
 		return nil
 	}
-	return errors.New("not found")
 }
 
 func (c *Conn) Close() {
@@ -176,9 +182,57 @@ func (r *Room) SatisfyEndRule() bool {
 //房间配置信息,决定房间有多少人，房间基础信息
 type RoomConfig struct {
 	GameName string
-	Limit    map[int]int
-	Start    map[int]int //the rules of start a game
-	End      map[int]int // the rules of end a game
+	l        map[string]int `json:"limit"`
+	Limit    map[int]int    `json:"l"`
+	s        map[string]int `json:"start"` //the rules of start a game
+	Start    map[int]int    `json:"f"`
+	e        map[string]int `json:"end"` // the rules of end a game
+	End      map[int]int    `json:"g"`
+}
+
+func InitConfig() error {
+	finfo, err := os.Stat(GAMECONFIGDIR)
+	if err != nil {
+		return err
+	}
+	if !finfo.IsDir() {
+		return errors.New("configpath is not a directory")
+	}
+	f, err := os.Open(GAMECONFIGDIR)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	fi, err := f.Readdir(-1)
+	if err != nil {
+		return err
+	}
+	for _, v := range fi {
+		if v.IsDir() {
+			continue
+		}
+		name := v.Name()
+		if ok, err := regexp.Match(".json$", []byte(name)); !ok || err != nil {
+			continue
+		}
+		f, err := os.Open(GAMECONFIGDIR + "/" + name)
+		if err != nil {
+			fmt.Println("open GAMECONFIGDIR game file", err.Error())
+			continue
+		}
+		byt, err := ioutil.ReadAll(f)
+		if err != nil {
+			fmt.Println("read config file", err.Error())
+			continue
+		}
+		rc := RoomConfig{GameName: name[:len(name)-5]}
+		if err = json.Unmarshal(byt, &rc); err != nil {
+			fmt.Println("read config", err.Error())
+			continue
+		}
+		roomConfig[rc.GameName] = rc
+	}
+	return nil
 }
 
 func (r RoomConfig) IsOverLimit(t int, total int) bool {
@@ -202,7 +256,7 @@ func IsOverLimit(name string, t, total int) bool {
 
 func init() {
 	roomConfig = make(map[string]RoomConfig, 4)
-	roomConfig["chess"] = RoomConfig{GameName: "chess", Limit: map[int]int{0: 2, 1: 10}, Start: map[int]int{0: 2}, End: map[int]int{0: 1}} //做个自动生成模块
+	InitConfig()
 }
 
 var roomId = struct {
@@ -288,10 +342,10 @@ func (r Room) Notify(flag int) {
 			println(err.Error())
 			return
 		}
-		d := Data{Type: 1, Content: msg, Time: time.Now().Unix()}
+		d := Data{Type: 3, Content: msg, Time: time.Now().Unix()}
 		r.Broadcast(d)
 	case ENDGAME:
-		d := Data{Type: 1, Content: []byte("{\"end\":true}"), Time: time.Now().Unix()} //@todo struct the broadcast message
+		d := Data{Type: 2, Content: []byte("{\"end\":true}"), Time: time.Now().Unix()} //@todo struct the broadcast message
 		r.Broadcast(d)
 	}
 }
@@ -322,6 +376,18 @@ type Data struct {
 	Content []byte
 	From    *Conn
 	Time    int64
+}
+
+func (d Data) putType() {
+	str := strings.Replace(string(d.Content), "\"T\"", "\"_t\"", -1) // escape T
+	str = strings.Replace(str, "'T'", "\"_t\"", -1)
+	d.Content = []byte(str)
+	l := len(d.Content)
+	if l > 2 {
+		d.Content = append(d.Content[:l-1], []byte(",T:"+strconv.Itoa(d.Type)+"}")...)
+		return
+	}
+	d.Content = []byte("{T:" + strconv.Itoa(d.Type) + "}")
 }
 
 type GameStartData struct {
