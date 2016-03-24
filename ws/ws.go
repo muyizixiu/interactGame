@@ -182,12 +182,40 @@ func (r *Room) SatisfyEndRule() bool {
 //房间配置信息,决定房间有多少人，房间基础信息
 type RoomConfig struct {
 	GameName string
-	l        map[string]int `json:"limit"`
+	L        map[string]int `json:"limit"`
 	Limit    map[int]int    `json:"l"`
-	s        map[string]int `json:"start"` //the rules of start a game
+	S        map[string]int `json:"start"` //the rules of start a game
 	Start    map[int]int    `json:"f"`
-	e        map[string]int `json:"end"` // the rules of end a game
+	E        map[string]int `json:"end"` // the rules of end a game
 	End      map[int]int    `json:"g"`
+}
+
+func (r *RoomConfig) ParseIntoIntRule() error {
+	r.Limit = make(map[int]int)
+	r.Start = make(map[int]int)
+	r.End = make(map[int]int)
+	for i, v := range r.L {
+		k, err := strconv.ParseInt(i, 10, 64)
+		r.Limit[int(k)] = v
+		if err != nil {
+			return err
+		}
+	}
+	for i, v := range r.S {
+		k, err := strconv.ParseInt(i, 10, 64)
+		r.Start[int(k)] = v
+		if err != nil {
+			return err
+		}
+	}
+	for i, v := range r.E {
+		k, err := strconv.ParseInt(i, 10, 64)
+		r.End[int(k)] = v
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func InitConfig() error {
@@ -230,6 +258,10 @@ func InitConfig() error {
 			fmt.Println("read config", err.Error())
 			continue
 		}
+		if err = (&rc).ParseIntoIntRule(); err != nil {
+			return err
+		}
+		fmt.Println(rc)
 		roomConfig[rc.GameName] = rc
 	}
 	return nil
@@ -342,10 +374,10 @@ func (r Room) Notify(flag int) {
 			println(err.Error())
 			return
 		}
-		d := Data{Type: 3, Content: msg, Time: time.Now().Unix()}
+		d := Data{Type: 200, Content: msg, Time: time.Now().Unix()} //200 游戏开始，游戏正常信号
 		r.Broadcast(d)
 	case ENDGAME:
-		d := Data{Type: 2, Content: []byte("{\"end\":true}"), Time: time.Now().Unix()} //@todo struct the broadcast message
+		d := Data{Type: 300, Content: []byte("{\"end\":true}"), Time: time.Now().Unix()} //300 游戏结束，游戏异常信号
 		r.Broadcast(d)
 	}
 }
@@ -398,7 +430,8 @@ type GameStartData struct {
 var WsHandler websocket.Handler = func(con *websocket.Conn) {
 	c, err := InitAConn(con)
 	if err != nil {
-		con.Write([]byte("{\"error\":\"wrong happen\"}")) //@todo something can be parsed by client and ready to close connection
+		Content := []byte("{\"error\":\"wrong happen\",\"T\":100}") //@todo something can be parsed by client and ready to close connection
+		con.Write(Content)
 		fmt.Println(err)
 		return
 	}
