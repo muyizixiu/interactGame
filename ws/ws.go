@@ -75,7 +75,7 @@ func (m *RoomManager) GetAvaliableRoom(game string) *Room {
 	if list, ok := m.Match[game]; ok {
 		for i, v := range list {
 			if list[i].Status == WAITING {
-				m.Match[game] = m.Match[game][i+1:]
+				m.Match[game] = m.Match[game][i:]
 				return v
 			}
 		}
@@ -102,7 +102,7 @@ type Conn struct {
 }
 
 func (c *Conn) Write(d Data) error {
-	d.putType()
+	(&d).putType()
 	switch d.Type {
 	default:
 		c.Conn.Write(d.Content)
@@ -410,16 +410,20 @@ type Data struct {
 	Time    int64
 }
 
-func (d Data) putType() {
+func (d *Data) putType() {
 	str := strings.Replace(string(d.Content), "\"T\"", "\"_t\"", -1) // escape T
 	str = strings.Replace(str, "'T'", "\"_t\"", -1)
 	d.Content = []byte(str)
 	l := len(d.Content)
 	if l > 2 {
-		d.Content = append(d.Content[:l-1], []byte(",T:"+strconv.Itoa(d.Type)+"}")...)
+		if d.From == nil {
+			d.Content = append(d.Content[:l-1], []byte(",\"T\":"+strconv.Itoa(d.Type)+",\"id\":"+strconv.Itoa(1)+"}")...)
+		} else {
+			d.Content = append(d.Content[:l-1], []byte(",\"T\":"+strconv.Itoa(d.Type)+",\"id\":"+strconv.Itoa(d.From.Id)+"}")...)
+		}
 		return
 	}
-	d.Content = []byte("{T:" + strconv.Itoa(d.Type) + "}")
+	d.Content = []byte("{\"T\":" + strconv.Itoa(d.Type) + "}")
 }
 
 type GameStartData struct {
