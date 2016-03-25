@@ -2,12 +2,28 @@
 <html>
 <head>
 	<title>flappy-block</title>
+	<script type="text/javascript" src="cfig.js"></script>
+	<style type="text/css">
+	body{
+		background-image: url(./muyizixiu/flur.png)
+	}
+	#cat{
+		position: absolute;
+		left:50%;
+		margin-left: -650px;
+		top:50%;
+		margin-top:-400px;
+	}
+	</style>
 </head>
 <body>
-<canvas width="1000" height="1000" id="cat">
+<canvas width="1300" height="1000" id="cat">
 </canvas>
 <script type="text/javascript">
-	var url="ws://192.168.2.101:81/?gName=flappy";
+if(window.screen.width<window.screen.height){
+	window.location.href="http://"+IP+"/flappy.mobile";
+}
+	var url="ws://"+IP+":81/?gName=flappy";
 	url+="&"+location.search.substring(1);
 	console.log(url)
 	var lock=true; 
@@ -18,13 +34,14 @@
 	};
 	var c=document.getElementById("cat");
 	var cxt=c.getContext("2d");
+	cxt.globalAlpha=0.8;
 	var count=0;
 	var RECT=100;
 	var RectTimer;
 		var j=0;
 	function drawPlat (h,w,hn,wn) {
 		var hn = arguments[2] ? arguments[2] : 12;
-		var wn = arguments[3] ? arguments[3] : 12;
+		var wn = arguments[3] ? arguments[3] : 15;
 		for(var i=0;i<hn;i++){
 		for(var j=0;j<wn;j++){
 			//cxt.fillStyle="rgb("+i*15+","+j*12+","+i*j+")";
@@ -62,7 +79,7 @@
 		count++;
 		if(count>22){
 			clearInterval(int)
-	drawPlat(RECT,RECT);
+	//drawPlat(RECT,RECT);
 
 		}
 	}
@@ -82,6 +99,7 @@
 		if(!plat.isAllowed(h,w)){
 			return
 		}
+		console.log(h,w)
 		plat.take(h,w,-1);
 		lock=true;
 		ws.send("{\"X\":"+h+",\"Y\":"+w+"}");
@@ -104,7 +122,7 @@
 		lock=true;
 		ws.send("{\"X\":"+h+",\"Y\":"+w+"}");
 		console.log(h,w)
-		color="#F42F39";
+		color="rgba(244,47,57,1)";
 		Little(h,w,color)	
      }
 	function drawRect(){
@@ -134,10 +152,10 @@
 		}
 		if((player.pnum)%2==0){
 			player.player1=true;
-  		color="#66D9EF";
+  		color="rgba(102,217,239,1)";
 		}else{
 			player.player2=true;
-  		color="#FFFB80";
+  		color="rgba(255,251,128,1)";
 		}
 		player.pnum++;
 		plat.take(h,w,data.id);
@@ -151,7 +169,7 @@
 		return
     }
     if(data.error){
-    	 window.location.href="http://192.168.2.101/flappy"; 
+    	 window.location.href="http://"+IP+"/flappy"; 
 	 return
     }
     if(data.start){
@@ -201,15 +219,15 @@ var plat={
 		checkPlat(n,x,y);
 	},
 	init:function(n){
-		for(var i=0;i<n;i++){
+		for(var i=-1;i<n;i++){
 			this.chess[i]=Array();
-			for(var j=0;j<n;j++){
+			for(var j=-1;j<n;j++){
 				this.chess[i][j]=0;
 			}
 		}
 	}
 }
-plat.init(10);
+plat.init(14);
 
 
 
@@ -220,7 +238,7 @@ function checkPlat(c,a,b){
 		num=1;
 			left=true;
 			right=true;
-		for(var i=1;i<12;i++){
+		for(var i=1;i<14;i++){
 			if(left){
 			if(plat.chess[x-i][y]==c){
 			console.log("left*********",num,c,plat.chess[x-i][y],x,y);
@@ -246,7 +264,7 @@ function checkPlat(c,a,b){
 			return num;
 		}
 		num=1;
-		for(var i=1;i<12;i++){
+		for(var i=1;i<14;i++){
 			if(!left){
 			if(plat.chess[x][y-i]==c){
 				num++
@@ -266,7 +284,7 @@ function checkPlat(c,a,b){
 			return num;
 		}
 		num=1;
-		for(var i=1;i<12;i++){
+		for(var i=1;i<14;i++){
 			if(left){
 			if(plat.chess[x-i][y-i]==c){
 				num++
@@ -289,7 +307,7 @@ function checkPlat(c,a,b){
 			return num;
 		}
 		num=1;
-		for(var i=1;i<12;i++){
+		for(var i=1;i<14;i++){
 			if(!left){
 			if(plat.chess[x+i][y-i]==c){
 				num++

@@ -98,6 +98,7 @@ to {background: #000;width: 80px;height:80px;}
 		-webkit-animation: whiteChess 1s forwards;
 	}
 	</style>
+	<script type="text/javascript" src="cfig.js"></script>
 </head>
 <body>
 <div id="plat"></div>
@@ -114,7 +115,7 @@ to {background: #000;width: 80px;height:80px;}
 	}
 	var start =false;
 	//var url="ws://192.168.2.111:81/?";
-	var url="ws://172.20.152.154:81/?";
+	var url="ws://"+IP+":81/?";
 	var me={
 		name:"yang",
 		clientType:0,
@@ -169,7 +170,11 @@ CreateUrl("gName")
 CreateUrl("act")
 function CreateUrl(str){
 if(urlPara[str]){
-	url=url+"&"+str+"="+urlPara[str];
+	if(url.substr(-1)=="?"){
+		url=url+str+"="+urlPara[str];
+	}else{
+		url=url+"&"+str+"="+urlPara[str];
+	}
 }
 }
 console.log(url);
@@ -199,7 +204,7 @@ socket.onopen = function(event) {
 	    if(mobile){
 	    	para="?dev=mobile";
 	    }
-    	 window.location.href="http://172.20.152.154/chess"+para; 
+    	 window.location.href="http://"+IP+"/chess"+para; 
     	 //window.location.href="http://192.168.2.111/chess"+para; 
 	 return
     }
