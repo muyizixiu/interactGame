@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>flappy-block</title>
+	<script type="text/javascript" src="cfig.js"></script>
+	<style type="text/css">
+	body{
+		background-image: url(./muyizixiu/flur.png)
+	}
+	#cat{
+		position: absolute;
+		left:50%;
+		margin-left: -500px;
+		top:50%;
+		margin-top:-650px;
+	}
+	</style>
+</head>
+<body>
+<canvas width="1000" height="1300" id="cat">
+</canvas>
+<script type="text/javascript">
+if(window.screen.width>window.screen.height){
+	window.location.href="http://"+IP+"/flappy";
+}
+	var url="ws://"+IP+":81/?gName=flappy";
+	url+="&"+location.search.substring(1);
+	console.log(url)
+	var lock=true; 
+	var player={
+		player1:true,
+		player2:true,
+		pnum:0
+	};
+	var c=document.getElementById("cat");
+	var cxt=c.getContext("2d");
+	cxt.globalAlpha=0.8;
+	var count=0;
+	var RECT=100;
+	var RectTimer;
+		var j=0;
+	function drawPlat (h,w,hn,wn) {
+		var hn = arguments[2] ? arguments[2] : 15;
+		var wn = arguments[3] ? arguments[3] : 12;
+		for(var i=0;i<hn;i++){
+		for(var j=0;j<wn;j++){
+			//cxt.fillStyle="rgb("+i*15+","+j*12+","+i*j+")";
+			cxt.fillStyle="#eee";
+			x=i*w;
+			y=j*h;
+		cxt.shadowOffsetX = 2;
+		cxt.shadowOffsetY = 2;
+		cxt.shadowColor="#ccc";
+			cxt.fillRect(x,y,w-2,h-2);
+		}
+	}
+	}
+	function play(id){
+		if(player.player1&&player.player2){
+			return true
+		}
+		return false;
+	}
+	function drawCircle(x,y,r){
+		t=new Date();
+		cxt.arc(x,y,r*t.getMilliseconds(),0,r*Math.PI);
+		cxt.strokeStyle="#ccc";
+		cxt.stroke();
+	}
+	function  floatRect(){
+		for(var i=0;i<=count;i++){
+			j=count-i;
+			h=i*RECT;
+			w=j*RECT;
+			cxt.clearRect(h,w,RECT,RECT);
+			cxt.fillStyle="#ddd";
+			cxt.fillRect(h,w,RECT-2,RECT-2);
+		}
+		count++;
+		if(count>22){
+			clearInterval(int)
+	//drawPlat(RECT,RECT);
+
+		}
+	}
+	//drawCircle(0,0,498);
+	//window.setInterval('drawCircle(0,0,1)',1);
+	int=setInterval("floatRect()",50)
+	//drawCircle(0,0,498);
+	//window.setInterval('drawCircle(0,0,1)',1);
+	c.onclick=function(e){
+		if(lock||!play()){
+			return
+		}
+		player.player1=player.player2=false;
+		j=0;
+		h=Math.floor(e.offsetX/RECT);
+		w=Math.floor(e.offsetY/RECT);
+		if(!plat.isAllowed(h,w)){
+			return
+		}
+		plat.take(h,w,-1);
+		lock=true;
+		ws.send("{\"X\":"+w+",\"Y\":"+h+"}");
+		color="#FF7673";
+		Little(h,w,color)	
+	}
+	c.touchstart=function  (event) {
+		console.log(lock)
+		if(lock||!play()){
+			return
+		}
+		player.player1=player.player2=false;
+		j=0;
+		h=Math.floor(e.offsetX/RECT);
+		w=Math.floor(e.offsetY/RECT);
+		if(!plat.isAllowed(h,w)){
+			return
+		}
+		plat.take(h,w,-1);
+		lock=true;
+		ws.send("{\"X\":"+w+",\"Y\":"+h+"}");
+		console.log(h,w)
+		color="rgba(244,47,57,1)";
+		Little(h,w,color)	
+     }
+	function drawRect(){
+		//cxt.clearRect(h,w,98,98)
+		cxt.fillStyle=color;
+		cxt.shadowOffsetX = 2;
+		cxt.shadowOffsetY = 2;
+		cxt.shadowColor="#aaa";
+		cxt.fillRect(h*RECT,w*RECT,j,98);
+	}
+	var ws=new WebSocket(url);
+	ws.onopen = function(event) { 
+
+  // 发送一个初始化消息
+  //socket.send(""); 
+
+  // 监听消息
+  ws.onmessage = function(event) { 
+    console.log('Client received a message',event); 
+    data=JSON.parse(event.data)
+    console.log(data)
+	    if(data.X||data.Y){
+  		w=data.X;
+  		h=data.Y;
+  		if(!plat.isAllowed(h,w)){
+			return
+		}
+		if((player.pnum)%2==0){
+			player.player1=true;
+  		color="rgba(102,217,239,1)";
+		}else{
+			player.player2=true;
+  		color="rgba(255,251,128,1)";
+		}
+		player.pnum++;
+		plat.take(h,w,data.id);
+  		j=0;
+  		Little(h,w,color)
+  		lock=false;
+	    }
+    if(data.end){
+    	//alert("your enemy has fleed away!");
+	lock=true;
+		return
+    }
+    if(data.error){
+    	 window.location.href="http://"+IP+"/flappy"; 
+	 return
+    }
+    if(data.start){
+	    lock=false;
+	    //alert("the battle has been lauched!");
+	   alert("开始了，点击就送!")
+    }
+  }
+}
+var self;
+function Little(x,y,color){
+	little.color=color;
+	little.count=0;
+	little.x=x;
+	little.y=y;
+	little.timer=setInterval("little.float()",10);
+}
+var little ={
+	x:0,
+	y:0,
+	color:"#000",
+	count:0,
+	Rect:100,
+	timer:1,
+	float:function() {
+		if(this.count>20){
+			clearInterval(this.timer)
+			return
+		}
+		cxt.fillStyle=this.color;
+		console.log(this.x,this.y,this.count*5,this.Rect)
+		cxt.fillRect(this.x*RECT,this.y*RECT,this.count*5,this.count*5);
+		this.count++;
+	}
+}
+var plat={
+	chess:Array(),
+	isAllowed:function(x,y){
+		console.log(this)
+		if((this.chess[x][y])!=0){
+			return false
+		}
+		return true
+	},
+	take:function(x,y,n) {
+		this.chess[x][y]=n;
+		checkPlat(n,x,y);
+	},
+	init:function(n){
+		for(var i=-1;i<n;i++){
+			this.chess[i]=Array();
+			for(var j=-1;j<n;j++){
+				this.chess[i][j]=0;
+			}
+		}
+	}
+}
+plat.init(16);
+
+
+
+function checkPlat(c,a,b){
+		n=function(){
+			x=a;y=b;
+		vict=false;
+		num=1;
+			left=true;
+			right=true;
+		for(var i=1;i<14;i++){
+			if(left){
+			if(plat.chess[x-i][y]==c){
+			console.log("left*********",num,c,plat.chess[x-i][y],x,y);
+				num++
+			}else{
+				left=false;
+			}
+			}
+			if(right){
+			if(plat.chess[x+i][y]==c){
+			console.log("right*********",num,c,plat.chess[x+i][y],x,y);
+				num++
+			}else{
+				right=false;
+			}
+			}
+			console.log("*********",num);
+			if(!right&&!left){
+				break;
+			}
+		}
+		if(num>=5){
+			return num;
+		}
+		num=1;
+		for(var i=1;i<14;i++){
+			if(!left){
+			if(plat.chess[x][y-i]==c){
+				num++
+			}else{
+				left=true;
+			}
+			}
+			if(!right){
+			if(plat.chess[x][y+i]==c){
+				num++
+			}else{
+				right=true;
+			}
+			}
+		}
+		if(num>=5){
+			return num;
+		}
+		num=1;
+		for(var i=1;i<14;i++){
+			if(left){
+			if(plat.chess[x-i][y-i]==c){
+				num++
+			}else{
+				left=false;
+			}
+			}
+			if(right){
+			if(plat.chess[x+i][y+i]==c){
+				num++
+			}else{
+				right=false;
+			}
+			}
+			if(!right&&!left){
+				break;
+			}
+		}
+		if(num>=5){
+			return num;
+		}
+		num=1;
+		for(var i=1;i<14;i++){
+			if(!left){
+			if(plat.chess[x+i][y-i]==c){
+				num++
+			}else{
+				left=true;
+			}
+			}
+			if(!right){
+			if(plat.chess[x-i][y+i]==c){
+				num++
+			}else{
+				right=true;
+			}
+			}
+		}
+		return num;
+		}()
+		if(n>=5){
+			alert("over");
+		}
+	}
+</script>
+</body>
+</html>
