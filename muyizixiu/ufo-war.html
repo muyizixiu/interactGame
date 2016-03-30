@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>ufo-war</title>
+	<style type="text/css">
+	html,body{
+		margin:0px;
+		padding: 0px;
+		position: relative;
+		height: 100%;
+		width: 100%;
+	}
+	canvas{
+		display: block;
+		position: absolute;
+		height: 100%;
+		width: 100%;
+	}
+	</style>
+	<script type="text/javascript" src="../cfig.js"></script>
+	<script type="text/javascript" src="ws.js"></script>
+</head>
+<body id="body">
+<canvas id="ufo-plat"></canvas>
+<script type="text/javascript">
+	var body=document.getElementById("body");
+	var canvas=document.getElementById('ufo-plat');
+	var cvs=canvas.getContext("2d");
+	var G={
+		height:body.offsetHeight,
+		width:body.offsetWidth,
+		startX:50,
+		startY:50,
+		unit:100,
+		timeLock:true,
+		lock:true,
+		color:["#123","#345","#333"],
+		map:Array(),
+		init:function() {
+			G.map=[[1,2,2,2,2,2,2,0,2,2,2,1,2,2,],[1,2,2,1,2,2,2,0,2,2,2,1,2,2,],[1,2,2,1,2,2,2,0,2,2,2,1,2,2,],[2,2,2,1,2,2,2,0,2,1,2,1,2,2,],[2,2,2,2,1,2,2,0,2,1,2,1,2,2,],[2,2,0,2,1,2,2,0,2,1,2,1,2,2,],[1,2,0,2,2,2,2,0,2,2,0,1,2,2,],[1,2,2,0,2,2,2,0,2,2,0,1,2,2,],[1,2,2,2,2,2,2,0,2,2,0,1,2,2,]];
+			for(x in G.map){
+				for(y in G.map[x]){
+					cvs.fillStyle=G.color[G.map[x][y]];
+					cvs.fillRect(x*G.unit+G.startX,y*G.unit+G.startY,G.unit,G.unit);
+				}
+			}
+		},
+		restore:function(x,y){
+				cvs.fillStyle=G.color[G.map[x][y]];
+				cvs.fillRect(x*G.unit+G.startX,y*G.unit+G.startY,G.unit,G.unit);
+		}
+	}
+	canvas.height=G.height;
+	canvas.width=G.width;
+	G.init();
+	var ufo={
+		id:0,
+		x:5,
+		y:5,
+		alpha:1,
+		r:50,
+		dx:-1,
+		dy:0,
+		draw:function(){
+			//cvs.clearRect(0,0,G.width,G.height);
+			cvs.beginPath();
+			cvs.arc(this.x*G.unit+2*G.startX,this.y*G.unit+2*G.startY,this.r,0,2*Math.PI);
+			cvs.fillStyle="rgba(112,135,156,"+this.alpha+")";
+			cvs.fill();
+			//cvs.stroke();
+		},
+		move:function(){
+			if((ufo.x<1&&ufo.dx<0)||(ufo.dx>0&&ufo.x>G.width/G.unit-2)){
+				ufo.dx=0;
+			}
+			if((ufo.y<1&ufo.dy<0)||(ufo.dy>0&&ufo.y>G.height/G.unit-2)){
+				ufo.dy=0;
+			}
+			G.restore(ufo.x,ufo.y);
+			ufo.x+=ufo.dx;
+			ufo.y+=ufo.dy;
+			ufo.draw();
+			ufo.next();
+			console.log(ufo.x,ufo.y)
+			window.setTimeout(ufo.move,1000);
+		},
+		next:function(){
+			if((ufo.x<1&&ufo.dx<0)||(ufo.dx>0&&ufo.x>G.width/G.unit-2)){
+				ufo.dx=0;
+			}
+			if((ufo.y<1&ufo.dy<0)||(ufo.dy>0&&ufo.y>G.height/G.unit-2)){
+				ufo.dy=0;
+			}
+			console.log((G.map[ufo.x+ufo.dx][ufo.y+ufo.dy]))
+			switch(G.map[ufo.x+ufo.dx][ufo.y+ufo.dy]){
+				case 2:
+					ufo.alpha=1;
+					break;
+				case 1:
+					ufo.alpha=1;
+					ufo.dx=0;
+					ufo.dy=0;
+					break;
+				case 0:
+					ufo.alpha=0;
+					break;
+			}
+			ws.send(JSON.stringfy(ufo));
+		}
+	}
+	var enemy={
+		id:0,
+		x:5,
+		y:5,
+		alpha:1,
+		r:50,
+		dx:-1,
+		dy:0,
+		draw:function(){
+			//cvs.clearRect(0,0,G.width,G.height);
+			cvs.beginPath();
+			cvs.arc(this.x*G.unit+2*G.startX,this.y*G.unit+2*G.startY,this.r,0,2*Math.PI);
+			cvs.fillStyle="rgba(112,135,156,"+this.alpha+")";
+			cvs.fill();
+			//cvs.stroke();
+		},
+		move:function(){
+			G.restore(enemy.x,enemy.y);
+			console.log(enemy.x,enemy.y)
+			enemy.x=G.enemy.x;
+			enemy.y=G.enemy.y;
+			enemy.dy=G.enemy.dy;
+			enemy.dx=G.enemy.dx;
+			enemy.draw();
+			window.setTimeout(enemy.move,1000);
+		},
+		next:function(){
+			if((enemy.x<1&&enemy.dx<0)||(enemy.dx>0&&enemy.x>G.width/G.unit-2)){
+				enemy.dx=0;
+			}
+			if((enemy.y<1&enemy.dy<0)||(enemy.dy>0&&enemy.y>G.height/G.unit-2)){
+				enemy.dy=0;
+			}
+			console.log((G.map[enemy.x+enemy.dx][enemy.y+enemy.dy]))
+			switch(G.map[enemy.x+enemy.dx][enemy.y+enemy.dy]){
+				case 2:
+					enemy.alpha=1;
+					break;
+				case 1:
+					enemy.alpha=1;
+					enemy.dx=0;
+					enemy.dy=0;
+					break;
+				case 0:
+					enemy.alpha=0;
+					break;
+			}
+		}
+	}
+	canvas.addEventListener("touchstart",function(e){
+		sx=e.touches[0].pageX;
+		sy=e.touches[0].pageY;
+	});
+	canvas.addEventListener("touchmove",function(e){
+		ex=e.touches[0].pageX;
+		ey=e.touches[0].pageY;
+	})
+	canvas.addEventListener("touchend",function(e){
+		if(G.lock){
+			return
+		}
+		x=ex-sx;
+		y=ey-sy;
+		if(G.timeLock){
+			G.timeLock=false;
+			if(Math.abs(x)>Math.abs(y)){
+				window.setTimeout(function () {
+					// body...
+					ufo.dx=(x/Math.abs(x));
+					ufo.dy=0;
+					ufo.next();
+					G.timeLock=true;
+				},500)
+			}else{
+				window.setTimeout(function () {
+					// body...
+					ufo.dy=(y/Math.abs(y));
+					ufo.dx=0;
+					ufo.next();
+					G.timeLock=true;
+				},500)
+			}
+		}
+	})
+	//ufo.move();
+</script>
+</body>
+</html>

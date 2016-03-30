@@ -152,6 +152,7 @@ func (r *Room) ShouldStart() bool {
 	return true
 }
 func (r Room) IsOverLimit(t int) bool {
+	fmt.Println(r.Clients_r)
 	if m, ok := r.Clients_r[t]; ok {
 		return IsOverLimit(r.GameName, t, len(m))
 	}
@@ -279,6 +280,7 @@ func (r RoomConfig) IsOverLimit(t int, total int) bool {
 var roomConfig map[string]RoomConfig
 
 func IsOverLimit(name string, t, total int) bool {
+	println(name)
 	if r, ok := roomConfig[name]; ok {
 		return r.IsOverLimit(t, total)
 	}
