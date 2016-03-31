@@ -1,7 +1,8 @@
-<!DOCTYPE html>
+<!DOCTYPE html PUBLIC "-//WAPFORUM//DTD XHTML Mobile 1.0//EN" "http://www.wapforum.org/DTD/xhtml-mobile10.dtd">
 <html>
 <head>
 	<title>ufo-war</title>
+	<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=0" />
 	<style type="text/css">
 	html,body{
 		margin:0px;
@@ -16,6 +17,7 @@
 		height: 100%;
 		width: 100%;
 	}
+
 	</style>
 	<script type="text/javascript" src="../cfig.js"></script>
 	<script type="text/javascript" src="ws.js"></script>
@@ -29,12 +31,33 @@
 	var G={
 		height:body.offsetHeight,
 		width:body.offsetWidth,
-		startX:50,
-		startY:50,
-		unit:100,
+		i:0,
+		j:0,
+		startX:10,
+		startY:10,
+		bulletShort:6,
+		bulletLong:18,
+		unit:36,
+		radius:18,
 		timeLock:true,
 		lock:true,
 		color:["#123","#345","#333"],
+		nextData:{
+			enemy:{
+				x:5,
+				y:5,
+				dx:0,
+				dy:0,
+			},
+			ufo:{
+				x:5,
+				y:5,
+				dx:0,
+				dy:0,
+			},
+			bullet:[],
+		},
+		fix:false,
 		map:Array(),
 		init:function() {
 			G.map=[[1,2,2,2,2,2,2,0,2,2,2,1,2,2,],[1,2,2,1,2,2,2,0,2,2,2,1,2,2,],[1,2,2,1,2,2,2,0,2,2,2,1,2,2,],[2,2,2,1,2,2,2,0,2,1,2,1,2,2,],[2,2,2,2,1,2,2,0,2,1,2,1,2,2,],[2,2,0,2,1,2,2,0,2,1,2,1,2,2,],[1,2,0,2,2,2,2,0,2,2,0,1,2,2,],[1,2,2,0,2,2,2,0,2,2,0,1,2,2,],[1,2,2,2,2,2,2,0,2,2,0,1,2,2,]];
@@ -48,6 +71,12 @@
 		restore:function(x,y){
 				cvs.fillStyle=G.color[G.map[x][y]];
 				cvs.fillRect(x*G.unit+G.startX,y*G.unit+G.startY,G.unit,G.unit);
+		},
+		freshFrame:function(){
+			ws.send(JSON.stringify(G.nextData));
+			G.fix=true;
+			G.timeLock=true;
+			setTimeout(G.freshFrame,1000);
 		}
 	}
 	canvas.height=G.height;
@@ -58,15 +87,22 @@
 		x:5,
 		y:5,
 		alpha:1,
-		r:50,
+		r:G.radius,
 		dx:-1,
 		dy:0,
+		nextData:{
+			x:5,
+			y:5,
+		},
 		draw:function(){
 			//cvs.clearRect(0,0,G.width,G.height);
 			cvs.beginPath();
-			cvs.arc(this.x*G.unit+2*G.startX,this.y*G.unit+2*G.startY,this.r,0,2*Math.PI);
+			cvs.arc(this.x*G.unit+G.startX+G.radius,this.y*G.unit+G.radius+G.startY,this.r,0,2*Math.PI);
 			cvs.fillStyle="rgba(112,135,156,"+this.alpha+")";
 			cvs.fill();
+			// console.log("i")
+			// console.log(G.i)
+			// console.log(new Date().getTime());
 			//cvs.stroke();
 		},
 		move:function(){
@@ -77,11 +113,13 @@
 				ufo.dy=0;
 			}
 			G.restore(ufo.x,ufo.y);
-			ufo.x+=ufo.dx;
-			ufo.y+=ufo.dy;
+			ufo.x=ufo.nextData.x;
+			ufo.y=ufo.nextData.y;
 			ufo.draw();
+			console.log(ufo);
+			G.fix=false;
 			ufo.next();
-			console.log(ufo.x,ufo.y)
+			//console.log(ufo.x,ufo.y)
 			window.setTimeout(ufo.move,1000);
 		},
 		next:function(){
@@ -91,13 +129,12 @@
 			if((ufo.y<1&ufo.dy<0)||(ufo.dy>0&&ufo.y>G.height/G.unit-2)){
 				ufo.dy=0;
 			}
-			console.log((G.map[ufo.x+ufo.dx][ufo.y+ufo.dy]))
+			//console.log((G.map[ufo.x+ufo.dx][ufo.y+ufo.dy]))
 			switch(G.map[ufo.x+ufo.dx][ufo.y+ufo.dy]){
 				case 2:
 					ufo.alpha=1;
 					break;
 				case 1:
-					ufo.alpha=1;
 					ufo.dx=0;
 					ufo.dy=0;
 					break;
@@ -105,7 +142,10 @@
 					ufo.alpha=0;
 					break;
 			}
-			ws.send(JSON.stringfy(ufo));
+			ufo.nextData.x=ufo.x+ufo.dx;
+			ufo.nextData.y=ufo.y+ufo.dy;
+			G.nextData.ufo=ufo.nextData;
+			//ws.send(JSON.stringify(ufo.data));
 		}
 	}
 	var enemy={
@@ -113,41 +153,35 @@
 		x:5,
 		y:5,
 		alpha:1,
-		r:50,
+		r:G.radius,
 		dx:-1,
 		dy:0,
 		draw:function(){
 			//cvs.clearRect(0,0,G.width,G.height);
 			cvs.beginPath();
-			cvs.arc(this.x*G.unit+2*G.startX,this.y*G.unit+2*G.startY,this.r,0,2*Math.PI);
+			cvs.arc(this.x*G.unit+G.radius+G.startX,this.y*G.unit+G.radius+G.startY,this.r,0,2*Math.PI);
 			cvs.fillStyle="rgba(112,135,156,"+this.alpha+")";
 			cvs.fill();
+			//console.log("j")
+			//console.log(G.j)
+			//console.log(new Date().getTime());
 			//cvs.stroke();
 		},
 		move:function(){
 			G.restore(enemy.x,enemy.y);
-			console.log(enemy.x,enemy.y)
-			enemy.x=G.enemy.x;
-			enemy.y=G.enemy.y;
-			enemy.dy=G.enemy.dy;
-			enemy.dx=G.enemy.dx;
+			enemy.x=G.nextData.enemy.x;
+			enemy.y=G.nextData.enemy.y;
+			enemy.now();
 			enemy.draw();
 			window.setTimeout(enemy.move,1000);
 		},
-		next:function(){
-			if((enemy.x<1&&enemy.dx<0)||(enemy.dx>0&&enemy.x>G.width/G.unit-2)){
-				enemy.dx=0;
-			}
-			if((enemy.y<1&enemy.dy<0)||(enemy.dy>0&&enemy.y>G.height/G.unit-2)){
-				enemy.dy=0;
-			}
-			console.log((G.map[enemy.x+enemy.dx][enemy.y+enemy.dy]))
-			switch(G.map[enemy.x+enemy.dx][enemy.y+enemy.dy]){
+		now:function(){
+			//console.log((G.map[enemy.x+enemy.dx][enemy.y+enemy.dy]))
+			switch(G.map[enemy.x][enemy.y]){
 				case 2:
 					enemy.alpha=1;
 					break;
 				case 1:
-					enemy.alpha=1;
 					enemy.dx=0;
 					enemy.dy=0;
 					break;
@@ -156,6 +190,37 @@
 					break;
 			}
 		}
+	}
+	function bullet(x,y,dx,dy){
+		if(dx==0&&dy==0){
+			return
+		}
+		var self=this;
+		if(Math.abs(dx)>Math.abs(dy)){
+			this.height=G.bulletShort;
+			this.width=G.bulletLong;
+		}else{
+			this.height=G.bulletLong;
+			this.width=G.bulletShort;
+		}
+		this.x=x;
+		this.y=y;
+		this.color="rgba(255,0,0,0.5)";
+		this.draw=function(){
+			cvs.fillStyle=this.color;
+			cvs.fillRect(this.x*G.unit+G.unit/2-this.width/2+G.startX,this.y*G.unit+G.startY,this.width,this.height);
+		};
+		this.move=function(){
+			G.restore(self.x,self.y);
+			//self.x=G.nextData.self.x;
+			//self.y=G.nextData.self.y;
+			self.x+=2*dx;
+			self.y+=2*dy;
+			self.draw();
+			setTimeout(self.move,1000);
+		};
+		G.nextData.bullet.push(this);
+		this.move();
 	}
 	canvas.addEventListener("touchstart",function(e){
 		sx=e.touches[0].pageX;
@@ -169,28 +234,70 @@
 		if(G.lock){
 			return
 		}
+		if(typeof(ex)=="undefined"||ex==0){
+			ex=sx;
+			ey=sy;
+		}
 		x=ex-sx;
 		y=ey-sy;
-		if(G.timeLock){
-			G.timeLock=false;
-			if(Math.abs(x)>Math.abs(y)){
-				window.setTimeout(function () {
-					// body...
-					ufo.dx=(x/Math.abs(x));
-					ufo.dy=0;
-					ufo.next();
-					G.timeLock=true;
-				},500)
-			}else{
-				window.setTimeout(function () {
-					// body...
-					ufo.dy=(y/Math.abs(y));
-					ufo.dx=0;
-					ufo.next();
-					G.timeLock=true;
-				},500)
-			}
+		ex=0;
+		console.log(x*x+y*y)
+		if(x*x+y*y<10){
+			new bullet(ufo.x,ufo.y,ufo.dx,ufo.dy);
+			return
+			// if(G.timeLock){
+			// 	G.timeLock=false;
+			// 	if(G.fix){
+			// 		setTimeout(function(){
+			// 			if(Math.abs(x)>Math.abs(y)){
+			// 				ufo.dx=(x/Math.abs(x));
+			// 				ufo.dy=0;
+			// 				ufo.next();
+			// 			}else{
+			// 				ufo.dy=(y/Math.abs(y));
+			// 				ufo.dx=0;
+			// 				ufo.next();
+			// 			}
+			// 		},500);
+			// 		return;
+			// 	}
+			// 	if(Math.abs(x)>Math.abs(y)){
+			// 			ufo.dx=(x/Math.abs(x));
+			// 			ufo.dy=0;
+			// 			ufo.next();
+			// 	}else{
+			// 			ufo.dy=(y/Math.abs(y));
+			// 			ufo.dx=0;
+			// 			ufo.next();
+			// 	}
+			// }
 		}
+			if(G.timeLock){
+				G.timeLock=false;
+				if(G.fix){
+					setTimeout(function(){
+						if(Math.abs(x)>Math.abs(y)){
+							ufo.dx=(x/Math.abs(x));
+							ufo.dy=0;
+							ufo.next();
+						}else{
+							ufo.dy=(y/Math.abs(y));
+							ufo.dx=0;
+							ufo.next();
+						}
+					},500);
+					return;
+				}
+				if(Math.abs(x)>Math.abs(y)){
+						ufo.dx=(x/Math.abs(x));
+						ufo.dy=0;
+						ufo.next();
+				}else{
+						ufo.dy=(y/Math.abs(y));
+						ufo.dx=0;
+						ufo.next();
+				}
+			}
 	})
 	//ufo.move();
 </script>
