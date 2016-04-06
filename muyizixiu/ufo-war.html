@@ -25,6 +25,7 @@
 <body id="body">
 <canvas id="ufo-plat"></canvas>
 <script type="text/javascript">
+	var postion = Math.floor(Math.random()*10);
 	document.addEventListener('touchmove', function(e){e.preventDefault()}, false);
 	var body=document.getElementById("body");
 	var canvas=document.getElementById('ufo-plat');
@@ -32,8 +33,8 @@
 	var G={
 		height:body.offsetHeight,
 		width:body.offsetWidth,
-		hn:14,
-		wn:9,
+		hn:13,
+		wn:8,
 		i:0,
 		j:0,
 		startX:10,
@@ -48,13 +49,13 @@
 		nextData:{
 			enemy:{
 				x:5,
-				y:5,
+				y:postion,
 				dx:0,
 				dy:0,
 			},
 			ufo:{
 				x:5,
-				y:5,
+				y:postion,
 				dx:0,
 				dy:0,
 			},
@@ -63,7 +64,7 @@
 		fix:false,
 		map:Array(),
 		init:function() {
-			G.map=[[1,2,2,2,2,2,2,0,2,2,2,1,2,2,],[1,2,2,1,2,2,2,0,2,2,2,1,2,2,],[1,2,2,1,2,2,2,0,2,2,2,1,2,2,],[2,2,2,1,2,2,2,0,2,1,2,1,2,2,],[2,2,2,2,1,2,2,0,2,1,2,1,2,2,],[2,2,0,2,1,2,2,0,2,1,2,1,2,2,],[1,2,0,2,2,2,2,0,2,2,0,1,2,2,],[1,2,2,0,2,2,2,0,2,2,0,1,2,2,],[1,2,2,2,2,2,2,0,2,2,0,1,2,2,]];
+			G.map=[[1,2,2,2,2,2,2,0,2,2,2,1,2,2,],[1,2,2,1,2,2,2,0,2,2,2,1,2,2,],[1,2,2,1,2,2,2,0,2,2,2,1,2,2,],[2,2,2,1,2,2,2,0,2,1,2,2,2,2,],[2,2,2,2,1,2,2,0,2,1,2,1,2,2,],[2,2,0,2,1,2,2,0,2,1,2,1,2,2,],[1,2,0,2,2,2,2,0,2,2,0,0,2,2,],[1,2,2,0,2,2,2,0,2,2,0,0,2,2,],[1,2,2,2,2,2,2,0,2,2,0,1,2,2,]];
 			for(x in G.map){
 				for(y in G.map[x]){
 					cvs.fillStyle=G.color[G.map[x][y]];
@@ -72,8 +73,33 @@
 			}
 		},
 		restore:function(x,y){
-				cvs.fillStyle=G.color[G.map[x][y]];
-				cvs.fillRect(x*G.unit+G.startX,y*G.unit+G.startY,G.unit,G.unit);
+				if(x>=0&&x<=G.wn&&y>=0&&y<=G.hn){
+					cvs.fillStyle=G.color[G.map[x][y]];
+					cvs.fillRect(x*G.unit+G.startX,y*G.unit+G.startY,G.unit,G.unit);
+				}
+					x+=1;
+				if(x>=0&&x<=G.wn&&y>=0&&y<=G.hn){
+					cvs.fillStyle=G.color[G.map[x][y]];
+					cvs.fillRect(x*G.unit+G.startX,y*G.unit+G.startY,G.unit,G.unit);
+				}
+					x-=1;
+					y+=1;
+				if(x>=0&&x<=G.wn&&y>=0&&y<=G.hn){
+					cvs.fillStyle=G.color[G.map[x][y]];
+					cvs.fillRect(x*G.unit+G.startX,y*G.unit+G.startY,G.unit,G.unit);
+				}
+					y-=1;
+					x-=1;
+				if(x>=0&&x<=G.wn&&y>=0&&y<=G.hn){
+					cvs.fillStyle=G.color[G.map[x][y]];
+					cvs.fillRect(x*G.unit+G.startX,y*G.unit+G.startY,G.unit,G.unit);
+				}
+					x+=1;
+					y-=1;
+				if(x>=0&&x<=G.wn&&y>=0&&y<=G.hn){
+					cvs.fillStyle=G.color[G.map[x][y]];
+					cvs.fillRect(x*G.unit+G.startX,y*G.unit+G.startY,G.unit,G.unit);
+				}
 		},
 		freshFrame:function(){
 			ws.send(JSON.stringify(G.nextData));
@@ -88,21 +114,48 @@
 	var ufo={
 		id:0,
 		x:5,
-		y:5,
+		y:postion,
 		alpha:1,
 		r:G.radius,
-		dx:-1,
+		dx:0,
 		dy:0,
 		nextData:{
 			x:5,
-			y:5,
+			y:2,
 		},
 		draw:function(){
+			var i=0;
 			//cvs.clearRect(0,0,G.width,G.height);
-			cvs.beginPath();
-			cvs.arc(this.x*G.unit+G.startX+G.radius,this.y*G.unit+G.radius+G.startY,this.r,0,2*Math.PI);
-			cvs.fillStyle="rgba(112,135,156,"+this.alpha+")";
-			cvs.fill();
+			var from={x:ufo.x,y:ufo.y};
+			var to={x:ufo.nextData.x,y:ufo.nextData.y};
+			var int=setInterval(function(){
+				i++;
+				G.restore(from.x,from.y);
+				G.restore(to.x,to.y);
+				var x=from.x+i*(to.x-from.x)/10;
+				var y=from.y+i*(to.y-from.y)/10;
+				var r=G.radius/2;
+				var alpha=1*ufo.alpha;
+				cvs.beginPath();
+				cvs.arc(x*G.unit+G.startX+G.radius,y*G.unit+G.radius+G.startY,r,0,2*Math.PI);
+				cvs.fillStyle="rgba(182,235,246,"+alpha+")";
+				cvs.fill();
+				cvs.beginPath();
+				var r=G.radius;
+				if(i%6==0){
+					alpha=0.1*ufo.alpha;
+				}else{
+					alpha=0;
+				}
+				cvs.arc(x*G.unit+G.startX+G.radius,y*G.unit+G.radius+G.startY,r,0,2*Math.PI);
+				cvs.fillStyle="rgba(112,135,156,"+alpha+")";
+				cvs.fill();
+				if(i>=10){
+					clearInterval(int);
+				}
+			},100);
+			ufo.x=ufo.nextData.x;
+			ufo.y=ufo.nextData.y;
 			// console.log("i")
 			// console.log(G.i)
 			// console.log(new Date().getTime());
@@ -115,21 +168,17 @@
 			//if((ufo.y<1&ufo.dy<0)||(ufo.dy>0&&ufo.y>G.height/G.unit-2)){
 			//	ufo.dy=0;
 			//}
-			G.restore(ufo.x,ufo.y);
-			ufo.x=ufo.nextData.x;
-			ufo.y=ufo.nextData.y;
 			ufo.draw();
-			console.log(ufo);
 			G.fix=false;
 			ufo.next();
 			//console.log(ufo.x,ufo.y)
 			window.setTimeout(ufo.move,1000);
 		},
 		next:function(){
-			if((ufo.x<1&&ufo.dx<0)||(ufo.dx>0&&ufo.x>=G.wn-1)){
+			if((ufo.x<1&&ufo.dx<0)||(ufo.dx>0&&ufo.x>=G.wn)){
 				ufo.dx=0;
 			}
-			if((ufo.y<1&ufo.dy<0)||(ufo.dy>0&&ufo.y>=G.hn-1)){
+			if((ufo.y<1&ufo.dy<0)||(ufo.dy>0&&ufo.y>=G.hn)){
 				ufo.dy=0;
 			}
 			//console.log((G.map[ufo.x+ufo.dx][ufo.y+ufo.dy]))
@@ -154,33 +203,66 @@
 	var enemy={
 		id:0,
 		x:5,
-		y:5,
+		y:10,
 		alpha:1,
 		r:G.radius,
-		dx:-1,
+		dx:0,
+		dy:0,
+		nextData:{
+			x:5,
+ 			y:5,
+		},
 		dy:0,
 		draw:function(){
+			var i=0;
 			//cvs.clearRect(0,0,G.width,G.height);
-			cvs.beginPath();
-			cvs.arc(this.x*G.unit+G.radius+G.startX,this.y*G.unit+G.radius+G.startY,this.r,0,2*Math.PI);
-			cvs.fillStyle="rgba(112,135,156,"+this.alpha+")";
-			cvs.fill();
-			//console.log("j")
-			//console.log(G.j)
-			//console.log(new Date().getTime());
+			var from={x:enemy.x,y:enemy.y};
+			var to={x:enemy.nextData.x,y:enemy.nextData.y};
+			var int=setInterval(function(){
+				i++;
+				G.restore(from.x,from.y);
+				G.restore(to.x,to.y);
+				var x=from.x+i*(to.x-from.x)/10;
+				var y=from.y+i*(to.y-from.y)/10;
+				var r=G.radius/2;
+				var alpha=1*enemy.alpha;
+				cvs.beginPath();
+				cvs.arc(x*G.unit+G.startX+G.radius,y*G.unit+G.radius+G.startY,r,0,2*Math.PI);
+				cvs.fillStyle="rgba(82,105,126,"+alpha+")";
+				cvs.fill();
+				cvs.beginPath();
+				r=G.radius;
+				if(i%6==0){
+					alpha=0.1*enemy.alpha;
+				}else{
+					alpha=0;
+				}
+				cvs.arc(x*G.unit+G.startX+G.radius,y*G.unit+G.radius+G.startY,r,0,2*Math.PI);
+				cvs.fillStyle="rgba(112,135,156,"+alpha+")";
+				cvs.fill();
+				if(i>=10){
+					clearInterval(int);
+				}
+			},100);
+			enemy.x=enemy.nextData.x;
+			enemy.y=enemy.nextData.y;
+			// console.log("i")
+			// console.log(G.i)
+			// console.log(new Date().getTime());
 			//cvs.stroke();
+			//cvs.clearRect(0,0,G.width,G.height);
 		},
 		move:function(){
 			G.restore(enemy.x,enemy.y);
-			enemy.x=G.nextData.enemy.x;
-			enemy.y=G.nextData.enemy.y;
+			enemy.nextData.x=G.nextData.enemy.x;
+			enemy.nextData.y=G.nextData.enemy.y;
 			enemy.now();
 			enemy.draw();
 			window.setTimeout(enemy.move,1000);
 		},
 		now:function(){
 			//console.log((G.map[enemy.x+enemy.dx][enemy.y+enemy.dy]))
-			switch(G.map[enemy.x][enemy.y]){
+			switch(G.map[enemy.nextData.x][enemy.nextData.y]){
 				case 2:
 					enemy.alpha=1;
 					break;

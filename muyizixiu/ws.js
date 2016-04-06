@@ -25,7 +25,12 @@ var ws=new WebSocket(url);
 	    //alert("the battle has been lauched!");
 	   //alert("开始了，点击就送!")
      ufo.move();
-     enemy.move();
+     setTimeout(function(){
+		     enemy.x=G.nextData.enemy.x;
+		     enemy.y=G.nextData.enemy.y;
+		     console.log("enemy",enemy)
+		     enemy.move();
+		     },2000);
      setTimeout(G.freshFrame,500);
      return
     }
@@ -33,5 +38,6 @@ var ws=new WebSocket(url);
       return
     }
     G.nextData.enemy=data.ufo;
+    console.log("ufo",data.ufo);
   }
 }
