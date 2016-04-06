@@ -25,12 +25,15 @@
 <body id="body">
 <canvas id="ufo-plat"></canvas>
 <script type="text/javascript">
+	document.addEventListener('touchmove', function(e){e.preventDefault()}, false);
 	var body=document.getElementById("body");
 	var canvas=document.getElementById('ufo-plat');
 	var cvs=canvas.getContext("2d");
 	var G={
 		height:body.offsetHeight,
 		width:body.offsetWidth,
+		hn:14,
+		wn:9,
 		i:0,
 		j:0,
 		startX:10,
@@ -106,12 +109,12 @@
 			//cvs.stroke();
 		},
 		move:function(){
-			if((ufo.x<1&&ufo.dx<0)||(ufo.dx>0&&ufo.x>G.width/G.unit-2)){
-				ufo.dx=0;
-			}
-			if((ufo.y<1&ufo.dy<0)||(ufo.dy>0&&ufo.y>G.height/G.unit-2)){
-				ufo.dy=0;
-			}
+			//if((ufo.x<1&&ufo.dx<0)||(ufo.dx>0&&ufo.x>G.width/G.unit-2)){
+			//	ufo.dx=0;
+			//}
+			//if((ufo.y<1&ufo.dy<0)||(ufo.dy>0&&ufo.y>G.height/G.unit-2)){
+			//	ufo.dy=0;
+			//}
 			G.restore(ufo.x,ufo.y);
 			ufo.x=ufo.nextData.x;
 			ufo.y=ufo.nextData.y;
@@ -123,10 +126,10 @@
 			window.setTimeout(ufo.move,1000);
 		},
 		next:function(){
-			if((ufo.x<1&&ufo.dx<0)||(ufo.dx>0&&ufo.x>G.width/G.unit-2)){
+			if((ufo.x<1&&ufo.dx<0)||(ufo.dx>0&&ufo.x>=G.wn-1)){
 				ufo.dx=0;
 			}
-			if((ufo.y<1&ufo.dy<0)||(ufo.dy>0&&ufo.y>G.height/G.unit-2)){
+			if((ufo.y<1&ufo.dy<0)||(ufo.dy>0&&ufo.y>=G.hn-1)){
 				ufo.dy=0;
 			}
 			//console.log((G.map[ufo.x+ufo.dx][ufo.y+ufo.dy]))
